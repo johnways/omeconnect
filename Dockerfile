@@ -23,7 +23,7 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 # Only the app files (see .dockerignore): chooser page, customer app, admin dashboard.
-COPY index.html /usr/share/nginx/html/index.html
+COPY index.html privacy.html terms.html /usr/share/nginx/html/
 COPY customer-mobile-app/ /usr/share/nginx/html/customer-mobile-app/
 COPY admin-dashboard/ /usr/share/nginx/html/admin-dashboard/
 RUN rm -f /usr/share/nginx/html/50x.html \

@@ -34,7 +34,8 @@ def main() -> None:
         shutil.rmtree(OUT)
     OUT.mkdir()
 
-    shutil.copy2(ROOT / "index.html", OUT / "index.html")
+    for page in ("index.html", "privacy.html", "terms.html"):
+        shutil.copy2(ROOT / page, OUT / page)
     for folder in APP_FOLDERS:
         target = OUT / folder
         target.mkdir()
