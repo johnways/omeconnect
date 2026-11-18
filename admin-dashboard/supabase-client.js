@@ -66,6 +66,11 @@
       return request('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password } });
     },
 
+    // Sign-ins last 1 hour; this swaps the refresh token for a fresh session.
+    async refreshSession(refreshToken) {
+      return request('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: refreshToken } });
+    },
+
     async signOut(accessToken) {
       await request('/auth/v1/logout', { method: 'POST', accessToken });
     },

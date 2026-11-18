@@ -294,6 +294,104 @@ function stopAutoRefresh() {
   refreshTimer = null;
 }
 
+// ---------------------------------------------------------------- Live session
+// Realtime updates + keeping the sign-in valid. The refresh token is kept in
+// sessionStorage (this tab/app session only, cleared when it is closed) so an
+// update reload does not sign the customer out.
+const SESSION_KEY = 'omeconnect.customer.session';
+const LIVE_TABLES = [
+  'notifications', 'electricity_bills', 'payments', 'customer_accounts',
+  'account_verification_requests', 'announcements', 'complaints', 'users'
+];
+let liveUpdates = null;
+let sessionKeeperTimer = null;
+let liveRefreshTimer = null;
+let liveConcernsDue = false;
+
+function saveSessionForReload() {
+  try {
+    if (currentSession && currentSession.refresh_token) {
+      sessionStorage.setItem(SESSION_KEY, currentSession.refresh_token);
+    }
+  } catch { /* storage unavailable: reload simply means signing in again */ }
+}
+
+function forgetSavedSession() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+}
+
+function onLiveChange({ table }) {
+  if (table === 'complaints' || table === '*') liveConcernsDue = true;
+  // Several rows often change together (e.g. bill + notification): refresh once.
+  clearTimeout(liveRefreshTimer);
+  liveRefreshTimer = setTimeout(() => {
+    void refreshCustomerData();
+    if (liveConcernsDue) {
+      liveConcernsDue = false;
+      void loadConcerns();
+    }
+  }, 400);
+}
+
+async function keepSessionFresh(force = false) {
+  if (!currentSession || !currentSession.refresh_token || appConfig.demoMode) return;
+  const expiresAt = Number(currentSession.expires_at || 0) * 1000;
+  if (!force && expiresAt && expiresAt - Date.now() > 5 * 60 * 1000) return;
+  try {
+    const fresh = await supabaseClient.refreshSession(currentSession.refresh_token);
+    if (!fresh || !fresh.access_token) return;
+    currentSession = { ...currentSession, ...fresh, user: { ...currentSession.user, ...(fresh.user || {}) } };
+    saveSessionForReload();
+    if (liveUpdates) liveUpdates.setToken(currentSession.access_token);
+  } catch (error) {
+    console.warn('Could not renew the sign-in:', error.message);
+  }
+}
+
+// Phones pause timers in the background: renew and catch up when reopened.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !currentSession || !liveUpdates) return;
+  void keepSessionFresh().then(() => refreshCustomerData());
+});
+
+function startLiveSession() {
+  if (appConfig.demoMode || !currentSession || !window.OMECO_LIVE) return;
+  saveSessionForReload();
+  clearInterval(sessionKeeperTimer);
+  sessionKeeperTimer = setInterval(() => void keepSessionFresh(), 60000);
+  if (!liveUpdates) {
+    liveUpdates = window.OMECO_LIVE.createLiveUpdates({ tables: LIVE_TABLES, onChange: onLiveChange });
+  }
+  liveUpdates.start(currentSession.access_token);
+}
+
+function stopLiveSession() {
+  clearInterval(sessionKeeperTimer);
+  sessionKeeperTimer = null;
+  clearTimeout(liveRefreshTimer);
+  if (liveUpdates) liveUpdates.stop();
+  forgetSavedSession();
+}
+
+// After a reload (e.g. an app update), sign back in with this session's token.
+async function resumeSavedSession() {
+  if (appConfig.demoMode || !supabaseClient) return false;
+  let refreshToken = null;
+  try { refreshToken = sessionStorage.getItem(SESSION_KEY); } catch { return false; }
+  if (!refreshToken) return false;
+  forgetSavedSession(); // a refresh token works once; a new one is saved on success
+  setMessage('Signing you back in…', 'success');
+  try {
+    const session = await supabaseClient.refreshSession(refreshToken);
+    const signedIn = await completeSignIn(() => loadCustomerFromSession(session));
+    if (signedIn) setMessage('', '');
+    return signedIn;
+  } catch {
+    setMessage('', '');
+    return false;
+  }
+}
+
 document.getElementById('newPasswordForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   setMessage('', '');
@@ -631,6 +729,7 @@ async function completeSignIn(loadCustomer) {
     renderDashboard();
     setScreen('homeScreen');
     startAutoRefresh();
+    startLiveSession();
     return true;
   } catch (error) {
     if (error instanceof TwoStepRequired) {
@@ -1092,6 +1191,8 @@ mfaEnrollForm.addEventListener('submit', async (event) => {
     const factorId = enrollingFactorId;
     const upgraded = await supabaseClient.verifyTotp(currentSession.access_token, factorId, code);
     currentSession = { ...currentSession, ...upgraded };
+    saveSessionForReload();
+    if (liveUpdates && currentSession.access_token) liveUpdates.setToken(currentSession.access_token);
     currentCustomer.totpFactors = [{ id: factorId, factor_type: 'totp', status: 'verified' }];
     resetTwoStepEnrollment();
     renderTwoStepCard();
@@ -1403,6 +1504,7 @@ async function logout() {
   currentSession = null;
   currentCustomer = null;
   stopAutoRefresh();
+  stopLiveSession();
   loginForm.reset();
   concerns = [];
   highlightTracking = '';
@@ -1472,7 +1574,30 @@ if (appConfig.demoMode) {
   window.addEventListener('appinstalled', () => {
     if (installButton) installButton.classList.add('hidden');
   });
+
+  if (window.OMECO_LIVE) {
+    // The app needs the internet: block it with a notice while offline.
+    window.OMECO_LIVE.requireOnline({
+      appName: 'OMECOnnect',
+      onBackOnline: () => {
+        void keepSessionFresh();
+        void refreshCustomerData();
+        void loadConcerns();
+      }
+    });
+    // Pick up newly published versions of the app automatically.
+    window.OMECO_LIVE.watchForNewVersion();
+  }
 })();
 
 setScreen('loginScreen');
-void handleOAuthRedirect();
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const isRedirect = params.has('code') || params.has('error') || /access_token|error_description/.test(window.location.hash);
+  if (isRedirect) {
+    forgetSavedSession();
+    await handleOAuthRedirect();
+  } else {
+    await resumeSavedSession();
+  }
+})();

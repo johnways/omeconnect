@@ -136,6 +136,12 @@
       return authRequest('token?grant_type=password', { email, password });
     },
 
+    // Sign-ins last 1 hour; this swaps the refresh token for a fresh session
+    // (same user, same two-step level) so the app keeps working.
+    async refreshSession(refreshToken) {
+      return authRequest('token?grant_type=refresh_token', { refresh_token: refreshToken });
+    },
+
     // Google sign-in uses the OAuth PKCE flow: the browser is sent to Google
     // via Supabase, then comes back to redirectTo with ?code=..., which
     // exchangeCodeForSession() swaps for a session.

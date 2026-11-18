@@ -17,7 +17,8 @@ const demoCustomers = [
   { full_name: 'Sample Customer D', mobile_number: '+639170000004', email: '', municipality: null, barangay: null, customer_accounts: [] }
 ];
 
-// Session lives in memory only (no tokens in localStorage). Reloading = sign in again.
+// Session lives in memory (no tokens in localStorage). admin-ops.js keeps only
+// the refresh token in sessionStorage (this tab) so an update reload stays signed in.
 let session = null;
 let coverage = new Map();      // municipality -> [barangays] in OMECO order
 let customers = [];

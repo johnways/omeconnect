@@ -16,6 +16,8 @@ services:
     environment:
       # Your Supabase project URL (the pages may only talk to this address).
       SUPABASE_URL: https://qkhqrerexiikymnftlne.supabase.co
+      # Live updates (Supabase Realtime) use the secure WebSocket address.
+      SUPABASE_REALTIME_URL: wss://qkhqrerexiikymnftlne.supabase.co
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

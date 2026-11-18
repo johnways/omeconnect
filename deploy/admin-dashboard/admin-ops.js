@@ -558,10 +558,12 @@
       return;
     }
     const select = $('billAccount');
+    const chosen = select.value; // keep the admin's choice when the list refreshes live
     select.replaceChildren(
       new Option(state.verifiedAccounts.length ? 'Choose a verified account' : 'No verified accounts yet', ''),
       ...state.verifiedAccounts.map((a) => new Option(
         `${a.account_number} · ${(a.users && a.users.full_name) || 'Unlinked'}${a.service_area ? ` (${a.service_area})` : ''}`, a.id)));
+    if (chosen && state.verifiedAccounts.some((a) => a.id === chosen)) select.value = chosen;
     $('billFormHint').textContent = state.verifiedAccounts.length
       ? ''
       : 'Approve a customer in Verification first. Only verified accounts can receive bills.';
@@ -814,12 +816,97 @@
     }
   });
 
+  // ---------------------------------------------------------------- live updates
+  // Supabase Realtime pushes every change (new verification request, concern,
+  // payment, …) so the dashboard updates at once; the 30 s check stays as a
+  // safety net. The sign-in is renewed before it expires (1 hour) and kept for
+  // this browser tab only, so an update reload does not sign the admin out.
+  const SESSION_KEY = 'omeconnect.admin.session';
+  const LIVE_TABLES = [
+    'account_verification_requests', 'complaints', 'complaint_status_history', 'notifications',
+    'announcements', 'electricity_bills', 'payments', 'customer_accounts', 'users'
+  ];
+  let liveUpdates = null;
+  let keeperTimer = null;
+  let liveTimer = null;
+  let viewRefreshPending = false;
+
+  function saveSession() {
+    try { if (session && session.refresh_token) sessionStorage.setItem(SESSION_KEY, session.refresh_token); } catch { /* ignore */ }
+  }
+  function forgetSession() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+  }
+
+  // Don't redraw the screen under the admin while they are typing or in a dialog.
+  function editingNow() {
+    const active = document.activeElement;
+    const typing = active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && active.closest('.content.view.active');
+    return Boolean(typing || $('modal').open);
+  }
+  function refreshCurrentView() {
+    viewRefreshPending = false;
+    refreshActiveView();
+    const active = document.querySelector('.content.view.active');
+    if (active && active.id === 'customersView' && typeof loadCustomers === 'function') void loadCustomers();
+  }
+  function onLiveChange() {
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(async () => {
+      await poll();
+      if (editingNow()) viewRefreshPending = true;
+      else refreshCurrentView();
+    }, 400);
+  }
+  document.addEventListener('focusout', () => {
+    setTimeout(() => { if (viewRefreshPending && !editingNow()) refreshCurrentView(); }, 300);
+  });
+  $('modal').addEventListener('close', () => {
+    setTimeout(() => { if (viewRefreshPending && !editingNow()) refreshCurrentView(); }, 300);
+  });
+
+  async function keepSessionFresh(force = false) {
+    if (!live() || !session.refresh_token) return;
+    const expiresAt = Number(session.expires_at || 0) * 1000;
+    if (!force && expiresAt && expiresAt - Date.now() > 5 * 60 * 1000) return;
+    try {
+      const fresh = await supabaseClient.refreshSession(session.refresh_token);
+      if (!fresh || !fresh.access_token) return;
+      Object.assign(session, fresh);
+      saveSession();
+      if (liveUpdates) liveUpdates.setToken(session.access_token);
+    } catch (error) {
+      console.warn('Could not renew the sign-in:', error.message);
+    }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && live()) void keepSessionFresh().then(() => poll());
+  });
+
+  function startLive() {
+    if (!live() || !window.OMECO_LIVE) return;
+    saveSession();
+    clearInterval(keeperTimer);
+    keeperTimer = setInterval(() => void keepSessionFresh(), 60000);
+    if (!liveUpdates) liveUpdates = window.OMECO_LIVE.createLiveUpdates({ tables: LIVE_TABLES, onChange: onLiveChange });
+    liveUpdates.start(session.access_token);
+  }
+  function stopLive() {
+    clearInterval(keeperTimer);
+    keeperTimer = null;
+    clearTimeout(liveTimer);
+    viewRefreshPending = false;
+    if (liveUpdates) liveUpdates.stop();
+    forgetSession();
+  }
+
   window.adminOnSignIn = async () => {
     state.knownUnread = null;
     if (!live()) {
       toast('Demo mode: sample data only. Connect Supabase to manage real records.');
       return;
     }
+    startLive();
     await poll({ quiet: true });
     const pending = state.requests.filter((r) => r.status === 'pending').length;
     if (pending) toast(`🔔 ${pending} verification request${pending === 1 ? '' : 's'} waiting for review.`);
@@ -828,10 +915,40 @@
   };
 
   window.adminOnSignOut = () => {
+    stopLive();
     clearInterval(state.pollTimer);
     state.pollTimer = null;
     Object.assign(state, { requests: [], complaints: [], announcements: [], bills: [], notifications: [], knownUnread: null });
     window.pendingRequestsByUser = new Map();
     renderBell();
   };
+
+  // ---------------------------------------------------------------- start-up
+  if (window.OMECO_LIVE) {
+    window.OMECO_LIVE.requireOnline({
+      appName: 'The OMECOnnect admin dashboard',
+      onBackOnline: () => { if (live()) void keepSessionFresh().then(() => { void poll(); refreshCurrentView(); }); }
+    });
+    window.OMECO_LIVE.watchForNewVersion();
+  }
+
+  // After a reload (e.g. a new version), sign the admin back in for this tab.
+  (async () => {
+    if (demoMode || !supabaseClient) return;
+    let refreshToken = null;
+    try { refreshToken = sessionStorage.getItem(SESSION_KEY); } catch { return; }
+    if (!refreshToken) return;
+    forgetSession();
+    try {
+      const fresh = await supabaseClient.refreshSession(refreshToken);
+      if (!fresh || !fresh.access_token) return;
+      if ((await supabaseClient.isAdmin(fresh.access_token)) !== true) return;
+      session = fresh;
+      setScreen('dashboard');
+      await window.adminOnSignIn();
+      setView('overviewView');
+    } catch {
+      // Expired or revoked: the admin simply signs in again.
+    }
+  })();
 })();

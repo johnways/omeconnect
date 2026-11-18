@@ -14,7 +14,8 @@ LABEL org.opencontainers.image.title="OMECOnnect web" \
 
 # Supabase project the pages are allowed to talk to (used in the security policy).
 # Override with:  docker run -e SUPABASE_URL=https://<ref>.supabase.co ...
-ENV SUPABASE_URL=https://qkhqrerexiikymnftlne.supabase.co
+ENV SUPABASE_URL=https://qkhqrerexiikymnftlne.supabase.co \
+    SUPABASE_REALTIME_URL=wss://qkhqrerexiikymnftlne.supabase.co
 
 # nginx renders /etc/nginx/templates/*.template into /etc/nginx/conf.d/ at start-up,
 # replacing ${SUPABASE_URL}. Remove the image's sample site first.
@@ -23,7 +24,7 @@ RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 # Only the app files (see .dockerignore): chooser page, customer app, admin dashboard.
-COPY index.html privacy.html terms.html manifest.webmanifest sw.js /usr/share/nginx/html/
+COPY index.html privacy.html terms.html offline.html manifest.webmanifest sw.js version.json /usr/share/nginx/html/
 COPY icons/ /usr/share/nginx/html/icons/
 COPY downloads/ /usr/share/nginx/html/downloads/
 COPY .well-known/ /usr/share/nginx/html/.well-known/

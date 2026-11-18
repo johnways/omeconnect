@@ -8,6 +8,7 @@ Usage (from the project folder):
     python tools/build_deploy.py
 Then drag the deploy/ folder onto Netlify (see docs/NEXT_STEPS_FOR_YOU.md, step 4).
 """
+import hashlib
 import json
 import shutil
 import sys
@@ -35,7 +36,7 @@ def main() -> None:
     OUT.mkdir()
 
     # Pages plus the installable-app files (manifest, offline helper).
-    for page in ("index.html", "privacy.html", "terms.html", "manifest.webmanifest", "sw.js"):
+    for page in ("index.html", "privacy.html", "terms.html", "offline.html", "manifest.webmanifest", "sw.js"):
         shutil.copy2(ROOT / page, OUT / page)
     # App icons, the Android app file and the Android app-link proof.
     for folder in ("icons", "downloads", ".well-known"):
@@ -55,7 +56,8 @@ def main() -> None:
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data:",
-        f"connect-src 'self' {supabase_url}",
+        # https = data and sign-in; wss = live updates (Supabase Realtime).
+        f"connect-src 'self' {supabase_url} {supabase_url.replace('https://', 'wss://', 1)}",
         "font-src 'self'",
         "object-src 'none'",
         "base-uri 'self'",
@@ -105,6 +107,14 @@ def main() -> None:
     # (Vercel already sends "max-age=0, must-revalidate", so updates show at once.)
     (OUT / "vercel.json").write_text(json.dumps(vercel, indent=2) + "\n", encoding="utf-8")
     (OUT / "robots.txt").write_text("User-agent: *\nDisallow: /admin-dashboard/\n", encoding="utf-8")
+
+    # Version fingerprint of the app files. Open apps compare it every few
+    # minutes and refresh themselves when it changes (see live.js).
+    digest = hashlib.sha256()
+    for path in sorted(p for p in OUT.rglob("*") if p.is_file()):
+        digest.update(path.relative_to(OUT).as_posix().encode())
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n"))
+    (OUT / "version.json").write_text(json.dumps({"version": digest.hexdigest()[:16]}) + "\n", encoding="utf-8")
 
     files = sorted(p.relative_to(OUT).as_posix() for p in OUT.rglob("*") if p.is_file())
     print(f"Built {OUT} with {len(files)} files:")
