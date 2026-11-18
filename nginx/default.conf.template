@@ -41,6 +41,13 @@ server {
         return 200 "ok\n";
     }
 
+    # Installable-app description.
+    location = /manifest.webmanifest {
+        types { }
+        default_type application/manifest+json;
+        expires -1;
+    }
+
     # Android app-link proof (must be public).
     location ^~ /.well-known/ {
         default_type application/json;
