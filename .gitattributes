@@ -1,0 +1,4 @@
+# Keep Unix line endings so Docker/nginx and Vercel get identical files
+* text=auto eol=lf
+*.png binary
+*.jpg binary

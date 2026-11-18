@@ -1,0 +1,92 @@
+OMECOnnect Project Plan
+
+AI assistant: AI assistant using Copilot SDK in VS Code
+
+Goal:
+Build a secure, intelligent, customer-centered electricity management system for OMECO Mamburao.
+
+Recommended stack:
+- Mobile app: Flutter
+- Admin web app: React or Next.js
+- Backend: Supabase + PostgreSQL
+- Authentication: Supabase Auth
+- Notifications: Firebase Cloud Messaging
+- AI: Secure AI API with approved knowledge base
+- Local sandbox: XAMPP for testing only
+
+Production architecture:
+- Supabase is the live database and backend authority
+- XAMPP is optional for local mock testing only
+- Do not treat XAMPP and Supabase as one live production database
+
+Phase 1: Database + authentication + admin/dashboard foundation
+1. Create Supabase project
+2. Configure Auth with email login and optional OTP/MFA
+3. Create schema tables for users, accounts, bills, complaints, announcements, payments, logs, AI history
+4. Implement Row Level Security for private customer data
+5. Define admin/user roles and permissions
+6. Prepare admin dashboard module structure
+
+Purpose:
+This phase creates the secure and organized foundation for the app. It keeps customer data isolated, ensures auditability, and gives the admin dashboard a clear structure.
+
+Phase 2: Customer mobile app screens
+1. Splash screen
+2. Login and registration
+3. OTP verification / account number verification
+4. Dashboard
+5. Bills and payment status
+6. Consumption history
+7. Announcements
+8. Complaints
+9. AI assistant
+10. Profile
+
+Purpose:
+This phase makes the application usable for actual customers and improves access to service information.
+
+Phase 3: Admin dashboard and operations
+1. Customer verification and management
+2. Billing management
+3. Announcement publishing
+4. Complaint status assignment
+5. Reports and audit logs
+6. Security alerts
+7. Role-based employee controls
+
+Purpose:
+This phase centralizes cooperative operations and allows staff to manage customers and support tasks efficiently.
+
+Phase 4: AI and notifications
+1. AI FAQ and billing support
+2. Complaint guidance
+3. Announcement explanation
+4. Push notifications for due dates and outages
+5. Customer-specific targeting based on service area
+
+Purpose:
+This improves response speed and reduces manual repetitive support work.
+
+Important rules:
+- Never invent official billing or outage information
+- Keep AI prompts constrained by approved knowledge
+- Only show customer information that they are authorized to access
+- Keep privileged admin actions logged
+
+Security priorities:
+- Secure login and auth
+- Role-based access control
+- RLS policies
+- Input validation
+- TLS/HTTPS
+- Audit log reviews
+- Privacy protection and data minimization
+
+Developer reminders:
+- Use Supabase for production
+- Use XAMPP only for local testing
+- Keep the same database logic consistent across local and production schemas where possible
+- Prefer clean modular structure over one large file
+
+Next action:
+Proceed to build the actual authentication and admin dashboard starter modules after the database design is approved.

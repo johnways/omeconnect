@@ -1,0 +1,32 @@
+OMECOnnect Customer Mobile App Starter Screens
+
+This starter simulates the main customer screens for the mobile application.
+It follows the database design and user roles using a customer-facing flow.
+
+Included screens:
+- Login
+- Registration
+- Password reset
+- Home dashboard
+- Bills overview
+- Announcements
+- Concerns / complaint form
+- AI assistant
+- Profile
+
+Mapped to database structure:
+- users -> login and profile screen
+- customer_accounts -> auth and account verification flow
+- electricity_bills -> bills screen
+- announcements -> announcements screen
+- complaints -> concerns screen
+- ai_chat_history -> AI assistant screen
+- notifications -> dashboard alert cards
+- audit_logs -> admin system trace later
+
+Navigation model:
+- Customer logs in and reaches home dashboard
+- Home screen has quick access to bill, concerns, and AI assistant
+- Bottom navigation supports easy movement across major sections
+
+This is a frontend prototype and should later be connected to Supabase Auth and the live Postgres tables.

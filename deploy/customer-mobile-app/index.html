@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMECOnnect</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="phone-shell">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span>●●●</span>
+      </div>
+      <p id="authMessage" class="form-message hidden" aria-live="polite"></p>
+
+      <main class="app-screen active" id="loginScreen">
+        <div class="logo-wrap">
+          <div class="logo-badge">OM</div>
+          <div>
+            <h1>OMECOnnect</h1>
+            <p>Electricity Management</p>
+          </div>
+        </div>
+
+        <div class="card glass-card">
+          <h2>Welcome back</h2>
+          <form id="loginForm">
+            <label>
+              Email
+              <input id="loginEmail" type="email" autocomplete="email" required />
+            </label>
+            <label>
+              Password
+              <input id="loginPassword" type="password" autocomplete="current-password" required />
+            </label>
+            <button type="submit" class="primary-btn">Login</button>
+          </form>
+          <div class="helper-row">
+            <button class="text-btn" data-screen="registerScreen">Create account</button>
+            <button class="text-btn" data-screen="forgotScreen">Forgot password?</button>
+          </div>
+          <div class="auth-divider"><span>or</span></div>
+          <button id="googleSignInButton" class="secondary-btn" type="button">
+            <svg class="google-mark" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.9 6.2C12.5 13.6 17.8 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/>
+              <path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.6 0 20.2 0 24s1 7.4 2.7 10.8l7.9-6.2z"/>
+              <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.2C6.6 42.6 14.6 48 24 48z"/>
+            </svg>
+            Continue with Google
+          </button>
+          <p id="demoNote" class="demo-note hidden"></p>
+        </div>
+
+        <a class="switch-link" href="../index.html">← OMECO staff? Choose a different sign-in</a>
+
+        <div class="feature-pills">
+          <span>Secure</span>
+          <span>Verified</span>
+          <span>AI Help</span>
+        </div>
+      </main>
+
+      <main class="app-screen" id="registerScreen">
+        <div class="header-row">
+          <button class="back-btn" data-screen="loginScreen">←</button>
+          <h2>Register</h2>
+          <span></span>
+        </div>
+
+        <div class="card form-card">
+          <form id="registerForm">
+            <label>
+              Full name
+              <input id="registerFullName" type="text" autocomplete="name" required />
+            </label>
+            <label>
+              Email
+              <input id="registerEmail" type="email" autocomplete="email" required />
+            </label>
+            <label>
+              Mobile number
+              <input id="registerMobile" type="tel" autocomplete="tel" required />
+            </label>
+            <label>
+              Municipality (Occidental Mindoro)
+              <select id="registerMunicipality" required>
+                <option value="">Loading service areas…</option>
+              </select>
+            </label>
+            <label>
+              Barangay
+              <select id="registerBarangay" required disabled>
+                <option value="">Choose a municipality first</option>
+              </select>
+            </label>
+            <label>
+              OMECO account number
+              <input id="registerAccountNumber" type="text" required />
+            </label>
+            <label>
+              Password
+              <input id="registerPassword" type="password" autocomplete="new-password" minlength="10" required />
+            </label>
+            <p class="muted-copy">We'll email you a confirmation link. Creating an account does not link or reveal an electricity account. OMECO staff must verify your account number first.</p>
+            <button class="primary-btn" type="submit">Create account</button>
+          </form>
+        </div>
+      </main>
+
+      <main class="app-screen" id="otpScreen">
+        <div class="header-row">
+          <button id="otpBackButton" class="back-btn" type="button">←</button>
+          <h2>Verify mobile</h2>
+          <span></span>
+        </div>
+
+        <div class="card form-card">
+          <p id="otpIntro" class="muted-copy">For your security, every OMECOnnect account must verify a mobile number.</p>
+
+          <form id="otpPhoneForm" novalidate>
+            <label>
+              Mobile number
+              <input id="otpPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09171234567" required />
+            </label>
+            <button id="otpSendButton" class="primary-btn" type="submit">Send code</button>
+          </form>
+
+          <form id="otpCodeForm" class="hidden" novalidate>
+            <p class="muted-copy">Enter the 6-digit code sent to <strong id="otpSentTo"></strong>.</p>
+            <label>
+              6-digit code
+              <input id="otpCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" />
+            </label>
+            <p id="otpTimer" class="otp-timer" aria-live="polite"></p>
+            <button id="otpVerifyButton" class="primary-btn" type="submit">Verify</button>
+            <div class="helper-row">
+              <button id="otpChangeNumberButton" class="text-btn" type="button">Change number</button>
+              <button id="otpResendButton" class="text-btn" type="button">Resend code</button>
+            </div>
+          </form>
+        </div>
+      </main>
+
+      <main class="app-screen" id="mfaScreen">
+        <div class="header-row">
+          <button id="mfaBackButton" class="back-btn" type="button">←</button>
+          <h2>Two-step check</h2>
+          <span></span>
+        </div>
+
+        <div class="card form-card">
+          <p class="muted-copy">Open your authenticator app and enter the current 6-digit code for <strong>OMECOnnect</strong>.</p>
+          <form id="mfaChallengeForm" novalidate>
+            <label>
+              Authenticator code
+              <input id="mfaChallengeCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" />
+            </label>
+            <button id="mfaChallengeButton" class="primary-btn" type="submit">Verify</button>
+          </form>
+          <p class="muted-copy">Lost your phone? Contact OMECO support to reset two-step verification.</p>
+        </div>
+      </main>
+
+      <main class="app-screen" id="forgotScreen">
+        <div class="header-row">
+          <button class="back-btn" data-screen="loginScreen">←</button>
+          <h2>Reset password</h2>
+          <span></span>
+        </div>
+
+        <div class="card form-card">
+          <p class="muted-copy">Enter your registered email to receive a secure reset link.</p>
+          <label>
+            Email address
+            <input id="resetEmail" type="email" autocomplete="email" required />
+          </label>
+          <button id="resetPasswordButton" class="primary-btn" type="button">Send reset link</button>
+        </div>
+      </main>
+
+      <main class="app-screen" id="newPasswordScreen">
+        <div class="header-row">
+          <span></span>
+          <h2>Set a new password</h2>
+          <span></span>
+        </div>
+
+        <form class="card form-card" id="newPasswordForm" novalidate>
+          <p class="muted-copy">Choose a new password for your OMECOnnect account.</p>
+          <label>
+            New password
+            <input id="newPassword" type="password" autocomplete="new-password" minlength="10" required />
+          </label>
+          <label>
+            Confirm new password
+            <input id="newPasswordConfirm" type="password" autocomplete="new-password" minlength="10" required />
+          </label>
+          <p class="field-hint">At least 10 characters.</p>
+          <button id="newPasswordButton" class="primary-btn" type="submit">Save new password</button>
+        </form>
+      </main>
+
+      <main class="app-screen" id="homeScreen">
+        <div class="header-row header-split">
+          <div>
+            <p class="eyebrow">Good morning</p>
+            <h2 id="customerName">Customer</h2>
+          </div>
+          <div class="avatar">MS</div>
+        </div>
+        <p id="demoDashboardBanner" class="demo-note hidden">DEMO DATA — Sample values only; not OMECO customer or billing data.</p>
+
+        <div class="card hero-card">
+          <div>
+            <p id="accountLabel" class="eyebrow light">Verified account</p>
+            <h3 id="maskedAccountNumber">Account pending verification</h3>
+          </div>
+          <div class="hero-amount">
+            <span>Current bill</span>
+            <strong id="currentBillAmount">—</strong>
+          </div>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="mini-card blue">
+            <span>Total due</span>
+            <strong id="dashboardBalance">—</strong>
+          </div>
+          <div class="mini-card yellow">
+            <span>Usage</span>
+            <strong id="dashboardUsage">—</strong>
+          </div>
+          <div class="mini-card green">
+            <span>Status</span>
+            <strong id="dashboardStatus">—</strong>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h3>Latest notifications</h3>
+          <button class="link-btn" id="markNotificationsRead" type="button">Mark all as read</button>
+        </div>
+
+        <div id="notificationList" class="list-box"></div>
+
+        <div class="quick-actions">
+          <button class="action-card" data-screen="billsScreen">
+            <span>My Bills</span>
+            <strong id="quickBillAmount">—</strong>
+          </button>
+          <button class="action-card" data-screen="complaintsScreen">
+            <span>Concerns</span>
+            <strong>Track</strong>
+          </button>
+          <button class="action-card" data-screen="aiScreen">
+            <span>AI Assistant</span>
+            <strong>Ask</strong>
+          </button>
+        </div>
+      </main>
+
+      <main class="app-screen" id="billsScreen">
+        <div class="header-row">
+          <button class="back-btn" data-screen="homeScreen">←</button>
+          <h2>My Bills</h2>
+          <span></span>
+        </div>
+
+        <div class="summary-box">
+          <span>Outstanding balance</span>
+          <strong id="billOutstandingTotal">—</strong>
+          <small id="billDueSummary">Due date: —</small>
+        </div>
+
+        <div id="billList" class="bill-list"></div>
+      </main>
+
+      <main class="app-screen" id="announcementsScreen">
+        <div class="header-row">
+          <button class="back-btn" data-screen="homeScreen">←</button>
+          <h2>Announcements</h2>
+          <span></span>
+        </div>
+
+        <div id="announcementList" class="announce-list"></div>
+      </main>
+
+      <main class="app-screen" id="complaintsScreen">
+        <div class="header-row">
+          <button class="back-btn" data-screen="homeScreen">←</button>
+          <h2>Concerns</h2>
+          <span class="tiny-action">New</span>
+        </div>
+
+        <form class="card form-card" id="concernForm" novalidate>
+          <label>
+            Concern category
+            <select id="concernType" required>
+              <option>Billing concerns</option>
+              <option>Payment problems</option>
+              <option>Power interruptions</option>
+              <option>Low voltage</option>
+              <option>New connection</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>
+            Details
+            <textarea id="concernDetails" rows="5" maxlength="2000" required placeholder="Describe the issue, service location, and how it affects you."></textarea>
+          </label>
+          <p id="concernCounter" class="field-hint">At least 10 characters · 0/2000</p>
+          <button id="concernSubmitButton" class="primary-btn" type="submit">Submit concern</button>
+        </form>
+
+        <h3 class="list-title">My concerns</h3>
+        <div id="concernList" class="concern-list">
+          <p class="empty-state">Your submitted concerns will appear here.</p>
+        </div>
+      </main>
+
+      <main class="app-screen" id="aiScreen">
+        <div class="header-row">
+          <button class="back-btn" data-screen="homeScreen">←</button>
+          <h2>AI Assistant</h2>
+          <span></span>
+        </div>
+
+        <div id="chatBox" class="chat-box">
+          <div class="message bot">
+            Sign in to ask about information available to your account.
+          </div>
+        </div>
+
+        <div class="chat-input-wrap">
+          <input id="aiInput" type="text" value="Ask about my bill" />
+          <button id="aiSendBtn" class="primary-btn small-btn">Send</button>
+        </div>
+      </main>
+
+      <main class="app-screen" id="profileScreen">
+        <div class="header-row">
+          <button class="back-btn" data-screen="homeScreen">←</button>
+          <h2>Profile</h2>
+          <span></span>
+        </div>
+
+        <div class="card profile-card">
+          <div class="profile-top">
+            <div class="avatar large">MS</div>
+            <div>
+              <strong id="profileName">Customer</strong>
+              <small id="profileEmail"></small>
+            </div>
+          </div>
+
+          <form id="verifyAccountForm" class="card form-card hidden">
+            <h3>Link your OMECO account</h3>
+            <p class="muted-copy">This submits a verification request. It does not expose bills or link an account until OMECO staff approves it.</p>
+            <label>
+              OMECO account number
+              <input id="verifyAccountNumber" type="text" required />
+            </label>
+            <button class="primary-btn" type="submit">Request verification</button>
+          </form>
+
+          <div class="profile-meta">
+            <div><span>Verified account</span><strong id="profileAccount">Pending verification</strong></div>
+            <div><span>Service area</span><strong id="profileArea">Not linked</strong></div>
+            <div><span>Location</span><strong id="profileLocation">Not set</strong></div>
+            <div><span>Membership</span><strong>Residential</strong></div>
+          </div>
+        </div>
+
+        <form class="card form-card" id="locationForm">
+          <h3>Your location</h3>
+          <p id="locationHint" class="muted-copy">Where your house or electricity connection is. OMECO uses this for outage and maintenance notices in your area.</p>
+          <label>
+            Municipality
+            <select id="profileMunicipality" required>
+              <option value="">Loading service areas…</option>
+            </select>
+          </label>
+          <label>
+            Barangay
+            <select id="profileBarangay" required disabled>
+              <option value="">Choose a municipality first</option>
+            </select>
+          </label>
+          <button id="locationSaveButton" class="primary-btn" type="submit">Save location</button>
+        </form>
+
+        <div class="card form-card" id="mfaCard">
+          <h3>Two-step verification</h3>
+          <p id="mfaStatusText" class="muted-copy">Add an authenticator app (Google Authenticator, Microsoft Authenticator) for extra protection. It's free and works without signal.</p>
+          <button id="mfaSetupButton" class="primary-btn" type="button">Set up authenticator app</button>
+
+          <div id="mfaEnrollPanel" class="hidden">
+            <p class="muted-copy">1. Open your authenticator app, tap <strong>+</strong> and scan this QR code.</p>
+            <img id="mfaQr" class="mfa-qr" alt="QR code to add OMECOnnect to your authenticator app" width="180" height="180" />
+            <p class="muted-copy">Can't scan? Enter this key manually: <code id="mfaSecret" class="mfa-secret"></code></p>
+            <form id="mfaEnrollForm" novalidate>
+              <label>
+                2. Enter the 6-digit code shown in the app
+                <input id="mfaEnrollCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" />
+              </label>
+              <button id="mfaEnrollVerifyButton" class="primary-btn" type="submit">Verify and turn on</button>
+              <button id="mfaEnrollCancelButton" class="secondary-btn" type="button">Cancel</button>
+            </form>
+          </div>
+
+          <button id="mfaDisableButton" class="secondary-btn hidden" type="button">Turn off two-step verification</button>
+        </div>
+
+        <div class="settings-list">
+          <button class="setting-item" id="logoutButton">Logout</button>
+          <button class="setting-item" data-screen="forgotScreen">Change password</button>
+          <button class="setting-item" data-screen="loginScreen">Privacy policy</button>
+        </div>
+      </main>
+
+      <button id="aiFab" class="ai-fab hidden" type="button" data-screen="aiScreen" aria-label="Open AI assistant">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
+          <path d="M12 8.2l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z" />
+        </svg>
+        <span class="ai-fab-label">Ask the AI assistant</span>
+      </button>
+
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-screen="homeScreen">Home</button>
+        <button class="nav-item" data-screen="billsScreen">Bills</button>
+        <button class="nav-item" data-screen="announcementsScreen">Alerts</button>
+        <button class="nav-item" data-screen="complaintsScreen">Concerns</button>
+        <button class="nav-item" data-screen="profileScreen">Profile</button>
+      </nav>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="supabase-client.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

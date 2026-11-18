@@ -1,0 +1,19 @@
+# Only the app files go into the image. Keep notes, SQL, tools and secrets out.
+.claude
+.git
+.vscode
+docs
+database
+supabase
+tools
+deploy
+backups
+*.md
+*.sql
+*.log
+.env
+.env.*
+**/config.example.js
+Dockerfile
+docker-compose.yml
+.dockerignore

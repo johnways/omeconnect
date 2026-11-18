@@ -1,0 +1,46 @@
+OMECOnnect AI and Notifications Integration Plan
+
+This module connects the customer-facing mobile app to the same database structure and role-based model used by the rest of the system.
+
+Key design idea:
+- The AI assistant should use only customer-authorized data already assigned to the logged-in user.
+- Notifications should come from announcements, billing due dates, and service updates tied to the customer’s service area or account.
+- Real app auth and database access must replace the local demo flow before production deployment.
+
+Data model mapping:
+- users -> customer identity and login
+- customer_accounts -> account number, service area, verification status
+- electricity_bills -> bill amount, due date, payment status
+- announcements -> scheduled maintenance and other service notices
+- notifications -> personalized alert messages
+- ai_chat_history -> chat history for the logged-in customer
+
+AI safety rules:
+- Do not invent billing values
+- Do not invent outage restoration times
+- Do not access data outside the customer’s authorized scope
+- Do not give official policy instructions unless approved by OMECO admin
+- Route complex complaints and emergency issues to the appropriate department
+
+Notification logic:
+- If a customer has an unpaid or due soon bill, create a billing notification
+- If an announcement matches the customer service area, push it as a notification
+- If a power interruption is scheduled, send it as a service alert
+- When notifications are read, update is_read status in the notifications table
+
+Real Supabase connection flow:
+1. Replace demo login with Supabase Auth sign-in
+2. Read the customer from the users table
+3. Read the customer account using the logged-in user id
+4. Query electricity_bills for that account and current billing data
+5. Query announcements filtered by affected_area or global service alerts
+6. Store AI chat responses in ai_chat_history
+7. Save notifications under the notifications table
+8. Enforce Row Level Security so a user only sees their own account and data
+
+Recommended frontend pattern:
+- Render notifications dynamically from the live database or Supabase query result
+- Allow the AI assistant to query current local customer context and generate safe responses
+- Keep customer portal screens restricted to the authenticated user only
+
+This planned module connects smoothly with the existing design and follows the admin/customer separation already prepared in the project.

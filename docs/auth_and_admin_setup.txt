@@ -1,0 +1,51 @@
+OMECOnnect Auth and Admin Dashboard Starter Setup
+
+This starter is a demo foundation for the live production system.
+It simulates admin login and dashboard access locally before Supabase Auth and Role-Based Access Control are connected.
+
+Demo admin login:
+- Email: admin@omeco.test
+- Password: admin123
+
+Files created:
+- admin-dashboard/index.html
+- admin-dashboard/styles.css
+- admin-dashboard/script.js
+
+What this starter simulates:
+- admin login screen
+- protected dashboard screen
+- admin navigation area
+- customer verification table
+- complaint queue panel
+- recent announcements panel
+- logout flow
+
+How it works:
+- The app stores a session in localStorage for demo purposes.
+- When a user logs in successfully, the dashboard becomes visible.
+- When the user logs out, the session is cleared.
+
+Later real integration:
+- Replace localStorage with Supabase Auth login
+- Verify the user role from Supabase users table
+- Add Row Level Security policies
+- Use admin_accounts table and role checks for restricted views
+- Connect dashboard data to live Postgres queries and API endpoints
+
+Security rules to implement next:
+- secure password hashing via Supabase Auth or backend hashing
+- admin-only routes with role checks
+- audit logging for sensitive actions
+- OTP/MFA support for customer and admin accounts
+- restricted access to customer account records
+
+Development sequence:
+1. Replace demo login logic with Supabase Auth
+2. Connect admin dashboard to real database tables
+3. Add customer verification workflow
+4. Add complaint assignment and status updates
+5. Add announcement publishing module
+6. Add audit logs and alerts
+
+This starter gives a usable admin dashboard foundation before the full production backend and mobile app are connected.

@@ -1,0 +1,23 @@
+# Local tool settings
+.claude/
+.vscode/
+.vercel/
+.netlify/
+
+# Secrets – never commit these
+.env
+.env.*
+*.pem
+*.key
+
+# Database backups contain customer data – keep them off GitHub
+backups/
+backup-*.sql
+
+# Generated / temporary
+__pycache__/
+*.pyc
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
