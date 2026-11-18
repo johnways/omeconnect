@@ -1430,5 +1430,49 @@ if (appConfig.demoMode) {
   document.querySelector('.avatar').textContent = 'DU';
 }
 
+// ---------------------------------------------------------------- Mobile app
+// Lets the site work as an installable app, and drives the "Get the app" card.
+(function setUpMobileApp() {
+  const card = document.getElementById('getAppCard');
+  const installButton = document.getElementById('installAppButton');
+  const runningAsApp =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true ||
+    document.referrer.startsWith('android-app://');
+  if (runningAsApp && card) card.classList.add('hidden');
+
+  if ('serviceWorker' in navigator && window.isSecureContext) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // The app still works without offline support.
+      });
+    });
+  }
+
+  let installPrompt = null;
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    if (installButton) installButton.classList.remove('hidden');
+  });
+
+  if (installButton) {
+    installButton.addEventListener('click', async () => {
+      if (!installPrompt) return;
+      installPrompt.prompt();
+      try {
+        await installPrompt.userChoice;
+      } finally {
+        installPrompt = null;
+        installButton.classList.add('hidden');
+      }
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    if (installButton) installButton.classList.add('hidden');
+  });
+})();
+
 setScreen('loginScreen');
 void handleOAuthRedirect();

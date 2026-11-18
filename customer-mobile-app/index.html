@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OMECOnnect</title>
+    <meta name="theme-color" content="#0b5ed7" />
+    <meta name="description" content="OMECO customer app: bills, outage alerts, concerns and the AI assistant." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="OMECOnnect" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -259,6 +267,27 @@
             <strong>Ask</strong>
           </button>
         </div>
+
+        <section id="getAppCard" class="card get-app-card" aria-labelledby="getAppTitle">
+          <div class="get-app-head">
+            <img src="/icons/icon-192.png" alt="" width="48" height="48" />
+            <div>
+              <h3 id="getAppTitle">Get the OMECOnnect app</h3>
+              <p>Open your bills and alerts faster from your phone's home screen.</p>
+            </div>
+          </div>
+          <div class="get-app-actions">
+            <a id="downloadApkLink" class="primary-btn get-app-btn" href="/downloads/OMECOnnect.apk" download="OMECOnnect.apk">Download for Android (APK)</a>
+            <button id="installAppButton" class="secondary-btn get-app-btn hidden" type="button">Install on this phone</button>
+          </div>
+          <details class="get-app-help">
+            <summary>How to install</summary>
+            <p><strong>Android:</strong> tap <em>Download for Android</em>, open the downloaded file, and allow
+              "Install unknown apps" for your browser if asked. Or tap <em>Install on this phone</em> when shown.</p>
+            <p><strong>iPhone:</strong> open this page in Safari, tap the Share button, then
+              <em>Add to Home Screen</em>.</p>
+          </details>
+        </section>
       </main>
 
       <main class="app-screen" id="billsScreen">
@@ -416,7 +445,7 @@
         <div class="settings-list">
           <button class="setting-item" id="logoutButton">Logout</button>
           <button class="setting-item" data-screen="forgotScreen">Change password</button>
-          <button class="setting-item" data-screen="loginScreen">Privacy policy</button>
+          <a class="setting-item" href="/privacy.html">Privacy policy</a>
         </div>
       </main>
 

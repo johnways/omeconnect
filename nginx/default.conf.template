@@ -41,6 +41,21 @@ server {
         return 200 "ok\n";
     }
 
+    # Android app-link proof (must be public).
+    location ^~ /.well-known/ {
+        default_type application/json;
+        try_files $uri =404;
+    }
+
+    # The Android app file: always download, never cache an old version.
+    location ^~ /downloads/ {
+        types { application/vnd.android.package-archive apk; }
+        add_header Content-Disposition 'attachment; filename="OMECOnnect.apk"' always;
+        add_header X-Content-Type-Options "nosniff" always;
+        expires -1;
+        try_files $uri =404;
+    }
+
     # Never serve hidden files such as .env or .git.
     location ~ /\. {
         deny all;

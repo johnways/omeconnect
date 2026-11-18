@@ -34,8 +34,13 @@ def main() -> None:
         shutil.rmtree(OUT)
     OUT.mkdir()
 
-    for page in ("index.html", "privacy.html", "terms.html"):
+    # Pages plus the installable-app files (manifest, offline helper).
+    for page in ("index.html", "privacy.html", "terms.html", "manifest.webmanifest", "sw.js"):
         shutil.copy2(ROOT / page, OUT / page)
+    # App icons, the Android app file and the Android app-link proof.
+    for folder in ("icons", "downloads", ".well-known"):
+        if (ROOT / folder).is_dir():
+            shutil.copytree(ROOT / folder, OUT / folder)
     for folder in APP_FOLDERS:
         target = OUT / folder
         target.mkdir()
@@ -66,7 +71,14 @@ def main() -> None:
         "  Permissions-Policy: camera=(), microphone=(), geolocation=()\n"
         "\n"
         "/admin-dashboard/*\n"
-        "  X-Robots-Tag: noindex, nofollow\n",
+        "  X-Robots-Tag: noindex, nofollow\n"
+        "\n"
+        "/manifest.webmanifest\n"
+        "  Content-Type: application/manifest+json\n"
+        "\n"
+        "/downloads/*\n"
+        "  Content-Type: application/vnd.android.package-archive\n"
+        '  Content-Disposition: attachment; filename="OMECOnnect.apk"\n',
         encoding="utf-8",
     )
     # The same headers for Vercel (Vercel project "Root Directory" = deploy).
@@ -83,6 +95,11 @@ def main() -> None:
         "headers": [
             {"source": "/(.*)", "headers": common},
             {"source": "/admin-dashboard/(.*)", "headers": [{"key": "X-Robots-Tag", "value": "noindex, nofollow"}]},
+            {"source": "/manifest.webmanifest", "headers": [{"key": "Content-Type", "value": "application/manifest+json"}]},
+            {"source": "/downloads/(.*)", "headers": [
+                {"key": "Content-Type", "value": "application/vnd.android.package-archive"},
+                {"key": "Content-Disposition", "value": 'attachment; filename="OMECOnnect.apk"'},
+            ]},
         ],
     }
     # (Vercel already sends "max-age=0, must-revalidate", so updates show at once.)
