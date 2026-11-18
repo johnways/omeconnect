@@ -59,9 +59,11 @@ Hosted on **Vercel** from the private GitHub repository `johnways/omeconnect`
 (Vercel project *omeconnect*, Root Directory `deploy`). Supabase Site URL and Redirect URLs
 already point to it. Every `git push` to `main` publishes a new version (see `README.md`).
 
+Also done: Google sign-in app is **In production** (any Google account can use
+**Continue with Google**). Branding links: home page, `privacy.html`, `terms.html`; authorized
+domain `omeconnect.vercel.app`. Have OMECO review the privacy policy and terms wording.
+
 Still yours to do:
-- Google Cloud → **Google Auth Platform → Audience → Publish app**, so every Google account can
-  use **Continue with Google** (until then only your listed test users can).
 - Vercel's free **Hobby** plan is for non-commercial use. For real OMECO customer use, upgrade the
   Vercel team to **Pro** (or use the Netlify steps below, whose free plan allows it).
 
