@@ -255,6 +255,9 @@
             </div>
           </div>
           <button id="pushEnableButton" class="primary-btn push-btn" type="button">Turn on notifications</button>
+          <a id="pushOpenBrowser" class="primary-btn push-btn get-app-btn hidden" href="/customer-mobile-app/index.html" target="_blank" rel="noopener">Open OMECOnnect in my browser</a>
+          <button id="pushTestButton" class="secondary-btn push-btn hidden" type="button">Send me a test notification</button>
+          <p id="pushStatus" class="push-status hidden" role="status" aria-live="polite"></p>
         </section>
 
         <div class="section-head">
@@ -457,6 +460,7 @@
           <button class="setting-item" id="logoutButton">Logout</button>
           <button class="setting-item" data-screen="forgotScreen">Change password</button>
           <button class="setting-item" id="pushSettingButton" type="button">Phone notifications: Off</button>
+          <button class="setting-item hidden" id="pushTestSettingButton" type="button">Send a test notification</button>
           <a class="setting-item" href="/privacy.html">Privacy policy</a>
         </div>
       </main>

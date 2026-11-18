@@ -375,15 +375,29 @@ function stopLiveSession() {
 
 // ---------------------------------------------------------------- Phone pop-up notifications
 // Web Push: OMECO announcements, bills, verification results and concern
-// replies pop up on the phone, even when the app is closed.
+// replies pop up on the phone, even when the app is closed. Every step reports
+// its result inside the card, so the customer always sees what happened.
 const pushCard = document.getElementById('pushCard');
 const pushText = document.getElementById('pushText');
+const pushStatus = document.getElementById('pushStatus');
 const pushEnableButton = document.getElementById('pushEnableButton');
+const pushTestButton = document.getElementById('pushTestButton');
+const pushOpenBrowser = document.getElementById('pushOpenBrowser');
 const pushSettingButton = document.getElementById('pushSettingButton');
+const pushTestSettingButton = document.getElementById('pushTestSettingButton');
 const PUSH_DEFAULT_TEXT = pushText.textContent;
 const pushSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
 const onIphone = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const inAndroidWebView = /; wv\)/.test(navigator.userAgent);
 const openedFromHomeScreen = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+let pushJustEnabled = false;
+
+function showPushStatus(text, kind = '') {
+  pushStatus.textContent = text;
+  pushStatus.className = `push-status ${kind}`;
+  pushStatus.classList.toggle('hidden', !text);
+  if (text) pushCard.classList.remove('hidden');
+}
 
 function base64UrlToBytes(value) {
   const padded = (value + '='.repeat((4 - (value.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
@@ -401,13 +415,22 @@ async function renderPushControls() {
     pushCard.classList.add('hidden');
     return;
   }
+  pushOpenBrowser.classList.add('hidden');
   if (!pushSupported) {
-    const iphoneTip = onIphone && !openedFromHomeScreen;
-    pushCard.classList.toggle('hidden', !iphoneTip);
-    pushText.textContent = 'On iPhone: open this page in Safari, tap Share → Add to Home Screen, then open OMECOnnect from your home screen to turn on alerts.';
     pushEnableButton.classList.add('hidden');
-    pushSettingButton.textContent = 'Phone notifications: not available on this browser';
+    pushTestButton.classList.add('hidden');
+    pushTestSettingButton.classList.add('hidden');
     pushSettingButton.disabled = true;
+    pushSettingButton.textContent = 'Phone notifications: not available in this window';
+    pushCard.classList.remove('hidden');
+    if (onIphone && !openedFromHomeScreen) {
+      pushText.textContent = 'On iPhone: open this page in Safari, tap Share → Add to Home Screen, then open OMECOnnect from your home screen to turn on alerts.';
+    } else {
+      pushText.textContent = inAndroidWebView
+        ? 'This app window cannot show pop-up alerts. Open OMECOnnect in Chrome or Samsung Internet, sign in, and turn notifications on there.'
+        : 'This browser cannot show pop-up alerts. Open OMECOnnect in Chrome or Samsung Internet to turn them on.';
+      pushOpenBrowser.classList.remove('hidden');
+    }
     return;
   }
   const permission = Notification.permission;
@@ -415,26 +438,56 @@ async function renderPushControls() {
   const isOn = permission === 'granted' && Boolean(subscription);
   pushSettingButton.disabled = false;
   pushSettingButton.textContent = isOn ? 'Phone notifications: On (tap to turn off)' : 'Phone notifications: Off (tap to turn on)';
+  pushTestSettingButton.classList.toggle('hidden', !isOn);
+  pushTestButton.classList.toggle('hidden', !isOn);
   if (permission === 'denied') {
     pushCard.classList.remove('hidden');
-    pushText.textContent = 'Notifications are blocked for OMECOnnect. To allow them: open your phone Settings → Apps (or the browser\'s Site settings) → OMECOnnect → Notifications → Allow.';
-    pushEnableButton.classList.add('hidden');
+    pushText.textContent = 'Notifications are blocked for OMECOnnect on this phone. To allow them: tap the ⓘ or lock icon next to the web address → Permissions (or Notifications) → Allow. Or: phone Settings → Apps → your browser → Notifications → Sites. Then tap Turn on again.';
+    pushEnableButton.classList.remove('hidden');
     return;
   }
-  pushText.textContent = PUSH_DEFAULT_TEXT;
-  pushEnableButton.classList.remove('hidden');
-  pushCard.classList.toggle('hidden', isOn);
+  pushText.textContent = isOn
+    ? 'Pop-up alerts are ON for this phone. You will be notified about OMECO announcements, bills and updates.'
+    : PUSH_DEFAULT_TEXT;
+  pushEnableButton.classList.toggle('hidden', isOn);
+  // Keep the card on screen right after turning on, so the result can be read.
+  pushCard.classList.toggle('hidden', isOn && !pushJustEnabled);
+}
+
+async function sendTestPopUp() {
+  if (!currentSession) return;
+  showPushStatus('Sending a test notification…');
+  try {
+    const result = await supabaseClient.sendTestPush(currentSession.access_token);
+    if (result && result.sent) {
+      showPushStatus('✅ Test sent! A pop-up should appear within a few seconds. If you are looking at the app, check your notification bar.', 'ok');
+    } else if (result && result.reason === 'wait') {
+      showPushStatus('A test was just sent. Please wait 30 seconds before sending another.');
+    } else {
+      showPushStatus('This phone is not registered yet. Tap "Turn on notifications" first.', 'error');
+    }
+  } catch (error) {
+    showPushStatus(`Could not send a test: ${error.message}`, 'error');
+  }
 }
 
 async function turnOnPhoneNotifications() {
-  if (!currentSession || !pushSupported) return;
+  if (!currentSession) return;
+  if (!pushSupported) {
+    void renderPushControls();
+    return;
+  }
   pushEnableButton.disabled = true;
+  showPushStatus('Step 1 of 3: asking your phone for permission…');
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      setMessage('Notifications were not allowed. You can turn them on later from Profile.', 'error');
+      showPushStatus(permission === 'denied'
+        ? 'Notifications are blocked. Allow them in your browser settings (see the steps above), then tap Turn on again.'
+        : 'You did not allow notifications. Tap "Turn on notifications" again and choose Allow.', 'error');
       return;
     }
+    showPushStatus('Step 2 of 3: registering this phone…');
     const registration = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
     const publicKey = await supabaseClient.getPushPublicKey();
@@ -444,7 +497,8 @@ async function turnOnPhoneNotifications() {
       // Re-create it if it was made with a different key.
       const current = subscription.options && subscription.options.applicationServerKey;
       const wanted = base64UrlToBytes(publicKey);
-      const same = current && new Uint8Array(current).every((b, i) => b === wanted[i]) && new Uint8Array(current).length === wanted.length;
+      const currentBytes = current ? new Uint8Array(current) : null;
+      const same = currentBytes && currentBytes.length === wanted.length && currentBytes.every((b, i) => b === wanted[i]);
       if (!same) {
         await subscription.unsubscribe();
         subscription = null;
@@ -456,13 +510,19 @@ async function turnOnPhoneNotifications() {
         applicationServerKey: base64UrlToBytes(publicKey)
       });
     }
+    showPushStatus('Step 3 of 3: linking this phone to your account…');
     await supabaseClient.savePushSubscription(currentSession.access_token, subscription);
-    setMessage('🔔 Notifications are on. OMECO updates will pop up on this phone.', 'success');
+    pushJustEnabled = true;
+    await renderPushControls();
+    await sendTestPopUp();
   } catch (error) {
-    setMessage(`Could not turn on notifications: ${error.message}`, 'error');
+    const reason = String((error && error.message) || error);
+    const hint = /push service|registration failed|abort|not supported/i.test(reason)
+      ? ' Your browser could not reach its notification service. Make sure Google Play services are up to date, or try Chrome.'
+      : '';
+    showPushStatus(`Could not turn on notifications: ${reason}.${hint}`, 'error');
   } finally {
     pushEnableButton.disabled = false;
-    void renderPushControls();
   }
 }
 
@@ -475,6 +535,8 @@ async function turnOffPhoneNotifications(accessToken) {
 
 // After sign-in: if this phone already allows notifications, link it to this customer.
 async function syncPhoneNotifications() {
+  pushJustEnabled = false;
+  showPushStatus('');
   try {
     if (pushSupported && Notification.permission === 'granted' && currentSession) {
       const subscription = await getThisPhonesSubscription();
@@ -487,15 +549,27 @@ async function syncPhoneNotifications() {
 }
 
 pushEnableButton.addEventListener('click', () => void turnOnPhoneNotifications());
+pushTestButton.addEventListener('click', () => void sendTestPopUp());
+pushTestSettingButton.addEventListener('click', () => {
+  setScreen('homeScreen');
+  pushCard.scrollIntoView({ block: 'center' });
+  void sendTestPopUp();
+});
 pushSettingButton.addEventListener('click', async () => {
   if (!currentSession || !pushSupported) return;
   const subscription = await getThisPhonesSubscription();
   if (Notification.permission === 'granted' && subscription) {
     if (!window.confirm('Turn off pop-up notifications on this phone? You will still see updates inside the app.')) return;
     await turnOffPhoneNotifications(currentSession.access_token);
+    pushJustEnabled = false;
+    showPushStatus('');
     setMessage('Phone notifications are off.', 'success');
     void renderPushControls();
   } else {
+    // Show the card so the steps and any problem are visible.
+    setScreen('homeScreen');
+    pushCard.classList.remove('hidden');
+    pushCard.scrollIntoView({ block: 'center' });
     await turnOnPhoneNotifications();
   }
 });

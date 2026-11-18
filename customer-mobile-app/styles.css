@@ -1028,3 +1028,23 @@ a.setting-item {
   opacity: 0.6;
   cursor: default;
 }
+
+.push-status {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  background: #eef5ff;
+  color: #093c96;
+}
+
+.push-status.ok {
+  background: #e8f8ee;
+  color: #166534;
+}
+
+.push-status.error {
+  background: #fdecec;
+  color: #9b1c1c;
+}

@@ -157,6 +157,13 @@
       });
     },
 
+    // Sends a test pop-up to the signed-in customer's registered phones.
+    async sendTestPush(accessToken) {
+      return request(`${getBaseUrl()}/rest/v1/rpc/send_test_push`, {
+        method: 'POST', headers: authHeaders(accessToken), body: '{}'
+      });
+    },
+
     async removePushSubscription(accessToken, endpoint) {
       return request(`${getBaseUrl()}/rest/v1/rpc/remove_push_subscription`, {
         method: 'POST', headers: authHeaders(accessToken), body: JSON.stringify({ p_endpoint: endpoint })
