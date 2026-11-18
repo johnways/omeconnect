@@ -54,7 +54,18 @@ mailer, which only sends **a few emails per hour** and often lands in spam. With
 
 ---
 
-## 4. Put the system online so others can use it (free) – ~30 min
+## 4. ✅ DONE – the system is online at https://omeconnect.vercel.app
+Hosted on **Vercel** from the private GitHub repository `johnways/omeconnect`
+(Vercel project *omeconnect*, Root Directory `deploy`). Supabase Site URL and Redirect URLs
+already point to it. Every `git push` to `main` publishes a new version (see `README.md`).
+
+Still yours to do:
+- Google Cloud → **Google Auth Platform → Audience → Publish app**, so every Google account can
+  use **Continue with Google** (until then only your listed test users can).
+- Vercel's free **Hobby** plan is for non-commercial use. For real OMECO customer use, upgrade the
+  Vercel team to **Pro** (or use the Netlify steps below, whose free plan allows it).
+
+### (Alternative) Netlify instead of Vercel – ~30 min
 **Why:** right now it only works on your computer (`localhost`). Online, customers and staff can open it from any phone or PC.
 
 Using **Netlify** (free, drag-and-drop):
