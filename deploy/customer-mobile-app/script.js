@@ -373,6 +373,133 @@ function stopLiveSession() {
   forgetSavedSession();
 }
 
+// ---------------------------------------------------------------- Phone pop-up notifications
+// Web Push: OMECO announcements, bills, verification results and concern
+// replies pop up on the phone, even when the app is closed.
+const pushCard = document.getElementById('pushCard');
+const pushText = document.getElementById('pushText');
+const pushEnableButton = document.getElementById('pushEnableButton');
+const pushSettingButton = document.getElementById('pushSettingButton');
+const PUSH_DEFAULT_TEXT = pushText.textContent;
+const pushSupported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && window.isSecureContext;
+const onIphone = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const openedFromHomeScreen = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+function base64UrlToBytes(value) {
+  const padded = (value + '='.repeat((4 - (value.length % 4)) % 4)).replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+}
+
+async function getThisPhonesSubscription() {
+  if (!pushSupported) return null;
+  const registration = await navigator.serviceWorker.getRegistration('/');
+  return registration ? registration.pushManager.getSubscription() : null;
+}
+
+async function renderPushControls() {
+  if (!currentSession || appConfig.demoMode) {
+    pushCard.classList.add('hidden');
+    return;
+  }
+  if (!pushSupported) {
+    const iphoneTip = onIphone && !openedFromHomeScreen;
+    pushCard.classList.toggle('hidden', !iphoneTip);
+    pushText.textContent = 'On iPhone: open this page in Safari, tap Share → Add to Home Screen, then open OMECOnnect from your home screen to turn on alerts.';
+    pushEnableButton.classList.add('hidden');
+    pushSettingButton.textContent = 'Phone notifications: not available on this browser';
+    pushSettingButton.disabled = true;
+    return;
+  }
+  const permission = Notification.permission;
+  const subscription = await getThisPhonesSubscription();
+  const isOn = permission === 'granted' && Boolean(subscription);
+  pushSettingButton.disabled = false;
+  pushSettingButton.textContent = isOn ? 'Phone notifications: On (tap to turn off)' : 'Phone notifications: Off (tap to turn on)';
+  if (permission === 'denied') {
+    pushCard.classList.remove('hidden');
+    pushText.textContent = 'Notifications are blocked for OMECOnnect. To allow them: open your phone Settings → Apps (or the browser\'s Site settings) → OMECOnnect → Notifications → Allow.';
+    pushEnableButton.classList.add('hidden');
+    return;
+  }
+  pushText.textContent = PUSH_DEFAULT_TEXT;
+  pushEnableButton.classList.remove('hidden');
+  pushCard.classList.toggle('hidden', isOn);
+}
+
+async function turnOnPhoneNotifications() {
+  if (!currentSession || !pushSupported) return;
+  pushEnableButton.disabled = true;
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      setMessage('Notifications were not allowed. You can turn them on later from Profile.', 'error');
+      return;
+    }
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+    const publicKey = await supabaseClient.getPushPublicKey();
+    if (!publicKey) throw new Error('Notifications are not set up on the server yet.');
+    let subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      // Re-create it if it was made with a different key.
+      const current = subscription.options && subscription.options.applicationServerKey;
+      const wanted = base64UrlToBytes(publicKey);
+      const same = current && new Uint8Array(current).every((b, i) => b === wanted[i]) && new Uint8Array(current).length === wanted.length;
+      if (!same) {
+        await subscription.unsubscribe();
+        subscription = null;
+      }
+    }
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: base64UrlToBytes(publicKey)
+      });
+    }
+    await supabaseClient.savePushSubscription(currentSession.access_token, subscription);
+    setMessage('🔔 Notifications are on. OMECO updates will pop up on this phone.', 'success');
+  } catch (error) {
+    setMessage(`Could not turn on notifications: ${error.message}`, 'error');
+  } finally {
+    pushEnableButton.disabled = false;
+    void renderPushControls();
+  }
+}
+
+async function turnOffPhoneNotifications(accessToken) {
+  const subscription = await getThisPhonesSubscription().catch(() => null);
+  if (!subscription) return;
+  if (accessToken) await supabaseClient.removePushSubscription(accessToken, subscription.endpoint).catch(() => {});
+  await subscription.unsubscribe().catch(() => {});
+}
+
+// After sign-in: if this phone already allows notifications, link it to this customer.
+async function syncPhoneNotifications() {
+  try {
+    if (pushSupported && Notification.permission === 'granted' && currentSession) {
+      const subscription = await getThisPhonesSubscription();
+      if (subscription) await supabaseClient.savePushSubscription(currentSession.access_token, subscription);
+    }
+  } catch (error) {
+    console.warn('Could not link notifications to this account:', error.message);
+  }
+  void renderPushControls();
+}
+
+pushEnableButton.addEventListener('click', () => void turnOnPhoneNotifications());
+pushSettingButton.addEventListener('click', async () => {
+  if (!currentSession || !pushSupported) return;
+  const subscription = await getThisPhonesSubscription();
+  if (Notification.permission === 'granted' && subscription) {
+    if (!window.confirm('Turn off pop-up notifications on this phone? You will still see updates inside the app.')) return;
+    await turnOffPhoneNotifications(currentSession.access_token);
+    setMessage('Phone notifications are off.', 'success');
+    void renderPushControls();
+  } else {
+    await turnOnPhoneNotifications();
+  }
+});
+
 // After a reload (e.g. an app update), sign back in with this session's token.
 async function resumeSavedSession() {
   if (appConfig.demoMode || !supabaseClient) return false;
@@ -730,6 +857,7 @@ async function completeSignIn(loadCustomer) {
     setScreen('homeScreen');
     startAutoRefresh();
     startLiveSession();
+    void syncPhoneNotifications();
     return true;
   } catch (error) {
     if (error instanceof TwoStepRequired) {
@@ -1493,6 +1621,9 @@ navButtons.forEach((button) => {
 async function logout() {
   // Always sign out locally, even if the server call fails (expired session,
   // no internet); the server session then simply expires on its own.
+  // Unlink this phone first so the next person here gets no alerts meant for this customer.
+  if (currentSession) await turnOffPhoneNotifications(currentSession.access_token);
+  pushCard.classList.add('hidden');
   try {
     if (currentSession && supabaseClient) {
       await supabaseClient.signOut(currentSession.access_token);

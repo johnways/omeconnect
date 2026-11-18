@@ -136,6 +136,33 @@
       return authRequest('token?grant_type=password', { email, password });
     },
 
+    // ---------- Phone pop-up notifications (Web Push)
+    async getPushPublicKey() {
+      return request(`${getBaseUrl()}/rest/v1/rpc/get_push_public_key`, {
+        method: 'POST', headers: authHeaders(), body: '{}'
+      });
+    },
+
+    async savePushSubscription(accessToken, subscription) {
+      const json = subscription.toJSON();
+      return request(`${getBaseUrl()}/rest/v1/rpc/save_push_subscription`, {
+        method: 'POST',
+        headers: authHeaders(accessToken),
+        body: JSON.stringify({
+          p_endpoint: json.endpoint,
+          p_p256dh: json.keys && json.keys.p256dh,
+          p_auth: json.keys && json.keys.auth,
+          p_user_agent: navigator.userAgent
+        })
+      });
+    },
+
+    async removePushSubscription(accessToken, endpoint) {
+      return request(`${getBaseUrl()}/rest/v1/rpc/remove_push_subscription`, {
+        method: 'POST', headers: authHeaders(accessToken), body: JSON.stringify({ p_endpoint: endpoint })
+      });
+    },
+
     // Sign-ins last 1 hour; this swaps the refresh token for a fresh session
     // (same user, same two-step level) so the app keeps working.
     async refreshSession(refreshToken) {

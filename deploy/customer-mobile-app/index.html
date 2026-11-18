@@ -246,6 +246,17 @@
           </div>
         </div>
 
+        <section id="pushCard" class="card push-card hidden" aria-labelledby="pushTitle">
+          <div class="push-card-row">
+            <span class="push-bell" aria-hidden="true">🔔</span>
+            <div>
+              <h3 id="pushTitle">Get pop-up alerts on this phone</h3>
+              <p id="pushText">Be notified right away about OMECO announcements, outages, new bills and replies to your concerns — even when the app is closed.</p>
+            </div>
+          </div>
+          <button id="pushEnableButton" class="primary-btn push-btn" type="button">Turn on notifications</button>
+        </section>
+
         <div class="section-head">
           <h3>Latest notifications</h3>
           <button class="link-btn" id="markNotificationsRead" type="button">Mark all as read</button>
@@ -445,6 +456,7 @@
         <div class="settings-list">
           <button class="setting-item" id="logoutButton">Logout</button>
           <button class="setting-item" data-screen="forgotScreen">Change password</button>
+          <button class="setting-item" id="pushSettingButton" type="button">Phone notifications: Off</button>
           <a class="setting-item" href="/privacy.html">Privacy policy</a>
         </div>
       </main>

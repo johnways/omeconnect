@@ -989,3 +989,42 @@ a.setting-item {
   color: inherit;
   text-decoration: none;
 }
+
+/* ---------- Phone pop-up notifications card (Home) ---------- */
+.push-card {
+  margin-top: 16px;
+  border-color: #cfe1ff;
+  background: linear-gradient(135deg, #fffbea, #ffffff);
+}
+
+.push-card-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.push-bell {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.push-card h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.push-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.push-btn {
+  margin-top: 12px;
+}
+
+.push-btn[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
