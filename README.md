@@ -35,6 +35,11 @@ Vercel publishes the new version automatically after each push.
   (APK) shows the live site, so it never needs re-downloading for normal updates.
 - **Online-only**: nothing is stored for offline use; without internet the app shows a
   "No internet connection" notice and continues automatically when back online.
+- **Phone pop-up notifications (Web Push)**: customers tap *Turn on notifications* (Home card or
+  Profile). Every new row in `notifications` (announcements, bills, verification results, concern
+  replies) is pushed to their phones by the `send-push` Edge Function
+  (`database/phase13_push_notifications.sql`, `phase14_test_push.sql`). Keys live in Supabase
+  Vault. Works in Chrome / Samsung Internet on Android and on iPhone after *Add to Home Screen*.
 - Sign-ins renew themselves before the 1-hour limit, and survive an update reload (kept for the
   current tab/app session only).
 
