@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.omeconnect.twa",
+        "sha256_cert_fingerprints": ["A1:CF:ED:4F:C7:09:15:DA:01:53:B5:82:A2:9A:4F:27:A6:F9:C9:DA:99:5D:6F:CE:D7:56:57:1E:F5:DF:25:0A"]
+      }
+    }]

@@ -17,3 +17,6 @@ backups
 Dockerfile
 docker-compose.yml
 .dockerignore
+android-signing
+*.keystore
+*.jks

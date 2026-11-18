@@ -21,3 +21,8 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Android app signing key and passwords – private, never upload (back it up!)
+android-signing/
+*.keystore
+*.jks
