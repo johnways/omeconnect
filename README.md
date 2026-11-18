@@ -26,6 +26,18 @@ git push
 
 Vercel publishes the new version automatically after each push.
 
+## Live updates and app updates
+- **Data changes appear instantly** in the customer app and admin dashboard (Supabase Realtime,
+  `live.js`; tables listed in `database/phase12_realtime.sql`). Each user only receives changes
+  their database rules allow them to see. A 30–60 s check remains as a safety net.
+- **New versions reach every user automatically**: the build writes `version.json`; open apps
+  check it every 2 minutes and reload when reopened (or show "tap to refresh"). The Android app
+  (APK) shows the live site, so it never needs re-downloading for normal updates.
+- **Online-only**: nothing is stored for offline use; without internet the app shows a
+  "No internet connection" notice and continues automatically when back online.
+- Sign-ins renew themselves before the 1-hour limit, and survive an update reload (kept for the
+  current tab/app session only).
+
 ## Run locally with Docker
 ```bash
 docker compose up -d --build
