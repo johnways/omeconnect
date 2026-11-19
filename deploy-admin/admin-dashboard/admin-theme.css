@@ -715,3 +715,23 @@ body.bell-open { overflow: hidden; }
   .brgy-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
 }
 @media (prefers-reduced-motion: reduce) { .brgy-panel { animation: none; } }
+
+/* ================= Electricity rate panel ================= */
+.rate-panel { margin-top: 18px; }
+.rate-panel .panel-header small { display: block; margin-top: 4px; }
+.current-rates { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 20px 14px; }
+.rate-chip { display: grid; gap: 2px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(22, 82, 197, 0.3); background: linear-gradient(135deg, #f2f7ff, #fff); min-width: 200px; }
+.rate-chip span { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.rate-chip strong { font-size: 1.35rem; font-weight: 800; color: #0b2e6b; font-variant-numeric: tabular-nums; }
+.rate-chip small { color: var(--muted); font-size: 0.78rem; }
+.rate-missing { margin: 0; padding: 12px 14px; border-radius: 10px; background: rgba(245, 163, 0, 0.12); color: #92400e; font-size: 0.88rem; }
+.rate-form { padding: 0 20px 14px; display: grid; gap: 12px; }
+.rate-form.hidden { display: none; }
+.rate-form label { display: grid; gap: 6px; font-weight: 600; font-size: 0.85rem; }
+.rate-form .form-actions { justify-content: flex-start; }
+.rate-history-box { margin: 0 20px 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+.rate-history-box summary { cursor: pointer; font-weight: 700; font-size: 0.88rem; }
+.rate-history-box table { margin-top: 10px; }
+[data-theme="dark"] .rate-chip { background: linear-gradient(135deg, rgba(59, 123, 242, 0.14), #111b2e); border-color: rgba(59, 123, 242, 0.4); }
+[data-theme="dark"] .rate-chip strong { color: #b9cff7; }
+[data-theme="dark"] .rate-missing { color: #fbbf24; }

@@ -367,8 +367,90 @@
     }
   });
 
+  // ------------------------------------------------------------ electricity rate (₱ / kWh)
+  const CLASS_LABEL = { residential: 'Residential', commercial: 'Commercial', industrial: 'Industrial', public_building: 'Public building' };
+  const RATE_PART_LABEL = { generation: 'Generation', transmission: 'Transmission', system_loss: 'System loss', distribution: 'Distribution', supply: 'Supply & metering', universal: 'Universal charges', subsidies: 'Subsidies / lifeline', taxes: 'Taxes' };
+  const peso4 = (v) => `₱${Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+  const todayPH = () => new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+
+  async function showRates() {
+    const form = $('rateForm');
+    form.classList.toggle('hidden', !can('bills'));
+    if (!$('rateEffective').value) $('rateEffective').value = todayPH();
+    if (!ctx().live()) return;
+    try {
+      const [current, history] = await Promise.all([
+        rpc('get_current_rates'),
+        api('/rest/v1/electricity_rates?select=customer_class,rate_per_kwh,fixed_charge,effective_from,note,created_at&order=effective_from.desc,created_at.desc&limit=30')
+      ]);
+      $('currentRates').replaceChildren(...(current && current.length ? current.map((r) => el('div', { class: 'rate-chip' },
+        el('span', {}, CLASS_LABEL[r.customer_class] || r.customer_class),
+        el('strong', {}, `${peso4(r.rate_per_kwh)} / kWh`),
+        el('small', {}, `${Number(r.fixed_charge) ? `+ ${ctx().peso(r.fixed_charge)} monthly · ` : ''}since ${ctx().fmtDate(r.effective_from, false)}`)))
+        : [el('p', { class: 'rate-missing' }, 'No rate set yet. Customers will see "rate not published" in the Bill estimator until you save one.')]));
+      const today = todayPH();
+      ctx().setRows('rateHistoryRows', 'rateHistoryEmpty', (history || []).map((r) => el('tr', {},
+        el('td', {}, ctx().fmtDate(r.effective_from, false), r.effective_from > today ? el('span', { class: 'cell-sub' }, 'upcoming') : null),
+        el('td', {}, CLASS_LABEL[r.customer_class] || r.customer_class),
+        el('td', { class: 'mono' }, peso4(r.rate_per_kwh)),
+        el('td', { class: 'mono' }, ctx().peso(r.fixed_charge)),
+        el('td', {}, r.note || '—'),
+        el('td', {}, ctx().fmtDate(r.created_at)))), 'No rates yet.');
+    } catch (error) {
+      ctx().toast(`Could not load rates: ${error.message}`, 'error');
+    }
+  }
+
+  function readRateComponents() {
+    const parts = {};
+    document.querySelectorAll('#rateComponents [data-rate]').forEach((input) => {
+      if (input.value !== '' && Number.isFinite(Number(input.value))) parts[input.dataset.rate] = Number(input.value);
+    });
+    return parts;
+  }
+  $('rateComponents').addEventListener('input', () => {
+    const parts = readRateComponents();
+    const sum = Object.values(parts).reduce((a, b) => a + b, 0);
+    const rate = Number($('rateValue').value);
+    $('rateComponentSum').textContent = Object.keys(parts).length
+      ? `Breakdown total: ${peso4(sum)} per kWh${rate ? (Math.abs(sum - rate) < 0.0001 ? ' · matches the rate ✓' : ` · rate is ${peso4(rate)} (difference ${peso4(rate - sum)})`) : ''}`
+      : '';
+  });
+
+  $('rateForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!ctx().needLive()) return;
+    const rate = Number($('rateValue').value);
+    if (!(rate > 0 && rate < 1000)) { ctx().toast('Enter the rate per kWh, e.g. 11.8523.', 'error'); return; }
+    const parts = readRateComponents();
+    const label = CLASS_LABEL[$('rateClass').value];
+    const done = await ctx().openModal({
+      title: 'Save new electricity rate?',
+      confirmText: 'Save rate',
+      content: [el('p', { class: 'modal-summary' },
+        `${label}: ${peso4(rate)} per kWh`, el('br'),
+        `Fixed monthly charge: ${ctx().peso(Number($('rateFixed').value) || 0)}`, el('br'),
+        `Takes effect: ${ctx().fmtDate($('rateEffective').value, false)}`, el('br'),
+        'Customers will see it in the Bill estimator from that date. Past bills are not changed.')],
+      onConfirm: () => rpc('set_electricity_rate', {
+        p_customer_class: $('rateClass').value, p_rate_per_kwh: rate, p_fixed_charge: Number($('rateFixed').value) || 0,
+        p_components: Object.keys(parts).length ? parts : null, p_effective_from: $('rateEffective').value || null,
+        p_note: $('rateNote').value.trim() || null
+      })
+    });
+    if (done) {
+      ctx().toast('Rate saved. Customers can now estimate their bill with it.', 'success');
+      $('rateForm').reset();
+      $('rateEffective').value = todayPH();
+      $('rateComponentSum').textContent = '';
+      await showRates();
+    }
+  });
+
   // ------------------------------------------------------------ wire into the console
   const views = ctx().views;
+  const originalBills = views.billsView;
+  views.billsView = async () => { await originalBills(); await showRates(); };
   views.meterView = showMeter;
   const originalReports = views.reportsView;
   views.reportsView = async () => { await originalReports(); await loadKpis(); };

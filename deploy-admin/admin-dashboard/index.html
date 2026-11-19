@@ -471,6 +471,67 @@
               </div>
             </div>
 
+            <div class="panel rate-panel" id="ratePanel">
+              <div class="panel-header">
+                <div>
+                  <h3>Electricity rate (₱ per kWh)</h3>
+                  <small class="muted">Customers use this in the app's Bill estimator to predict their bill. Every change is kept in the history.</small>
+                </div>
+              </div>
+              <div id="currentRates" class="current-rates"></div>
+              <form id="rateForm" class="rate-form form-panel" novalidate>
+                <div class="form-grid">
+                  <label>Customer type
+                    <select id="rateClass">
+                      <option value="residential">Residential</option>
+                      <option value="commercial">Commercial</option>
+                      <option value="industrial">Industrial</option>
+                      <option value="public_building">Public building</option>
+                    </select>
+                  </label>
+                  <label>Rate per kWh (₱)
+                    <input id="rateValue" type="number" min="0.0001" max="999" step="0.0001" required placeholder="e.g. 11.8523" />
+                  </label>
+                  <label>Fixed monthly charge (₱)
+                    <input id="rateFixed" type="number" min="0" step="0.01" placeholder="0.00" />
+                  </label>
+                  <label>Takes effect on
+                    <input id="rateEffective" type="date" required />
+                  </label>
+                </div>
+                <details class="charges-box">
+                  <summary>Breakdown per kWh (optional, shown to customers)</summary>
+                  <div class="form-grid" id="rateComponents">
+                    <label>Generation<input data-rate="generation" type="number" step="0.0001" /></label>
+                    <label>Transmission<input data-rate="transmission" type="number" step="0.0001" /></label>
+                    <label>System loss<input data-rate="system_loss" type="number" step="0.0001" /></label>
+                    <label>Distribution<input data-rate="distribution" type="number" step="0.0001" /></label>
+                    <label>Supply &amp; metering<input data-rate="supply" type="number" step="0.0001" /></label>
+                    <label>Universal charges<input data-rate="universal" type="number" step="0.0001" /></label>
+                    <label>Subsidies / lifeline<input data-rate="subsidies" type="number" step="0.0001" /></label>
+                    <label>Taxes (VAT, local)<input data-rate="taxes" type="number" step="0.0001" /></label>
+                  </div>
+                  <p id="rateComponentSum" class="muted small"></p>
+                </details>
+                <label>Note (optional)
+                  <input id="rateNote" type="text" maxlength="300" placeholder="e.g. ERC-approved rate for December 2026" />
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn" id="rateSave">Save rate</button>
+                </div>
+              </form>
+              <details class="rate-history-box">
+                <summary>Rate history</summary>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Effective</th><th>Type</th><th>₱ / kWh</th><th>Fixed</th><th>Note</th><th>Saved</th></tr></thead>
+                    <tbody id="rateHistoryRows"></tbody>
+                  </table>
+                </div>
+                <p id="rateHistoryEmpty" class="empty-note hidden">No rates yet.</p>
+              </details>
+            </div>
+
             <div class="panel import-panel">
               <div class="panel-header">
                 <h3>Import many bills (CSV)</h3>
