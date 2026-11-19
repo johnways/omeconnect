@@ -26,7 +26,8 @@
     verificationTab: 'pending',
     complaintTab: 'open',
     knownUnread: null,
-    pollTimer: null
+    pollTimer: null,
+    staff: null
   };
 
   const $ = (id) => document.getElementById(id);
@@ -152,8 +153,36 @@
   async function loadComplaints() {
     state.complaints = await supabaseClient.select(
       'complaints?select=id,tracking_number,complaint_type,description,status,created_at,updated_at,municipality,barangay,user_id,' +
-      'users(full_name,email,mobile_number,municipality,barangay)&order=created_at.desc&limit=300', token());
+      'assigned_to,assigned_at,due_by,' +
+      'users:users!complaints_user_id_fkey(full_name,email,mobile_number,municipality,barangay)&order=created_at.desc&limit=300', token());
   }
+
+  // OMECO staff who can be given a concern.
+  async function loadStaff() {
+    const rows = await supabaseClient.select('admin_accounts?select=user_id,department,users(full_name,email)', token());
+    state.staff = rows.map((r) => ({ id: r.user_id, name: (r.users && (r.users.full_name || r.users.email)) || 'Staff', department: r.department || '' }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  const staffName = (id) => {
+    const person = (state.staff || []).find((s) => s.id === id);
+    return person ? (id === myId() ? `${person.name} (you)` : person.name) : 'Staff';
+  };
+
+  // Time left until a concern's target (SLA). Closed concerns show "Done".
+  function slaBadge(c) {
+    if (!OPEN_COMPLAINT(c.status)) return el('span', { class: 'sla done' }, 'Done');
+    if (!c.due_by) return el('span', { class: 'sla done' }, '—');
+    const ms = new Date(c.due_by).getTime() - Date.now();
+    const minutes = Math.max(1, Math.round(Math.abs(ms) / 60000));
+    const hours = Math.round(minutes / 60);
+    const span = minutes < 60 ? `${minutes} min` : hours >= 48 ? `${Math.round(hours / 24)} d` : `${hours} h`;
+    const node = ms < 0
+      ? el('span', { class: 'sla late' }, `Overdue ${span}`)
+      : el('span', { class: `sla ${ms < 2 * 3600000 ? 'soon' : 'ok'}` }, `Due in ${span}`);
+    node.title = `Target: ${fmtDate(c.due_by)}`;
+    return node;
+  }
+  const isOverdue = (c) => OPEN_COMPLAINT(c.status) && c.due_by && new Date(c.due_by).getTime() < Date.now();
 
   async function loadAnnouncements() {
     state.announcements = await supabaseClient.select(
@@ -385,7 +414,7 @@
   async function showComplaints() {
     if (!live()) return;
     try {
-      await loadComplaints();
+      await Promise.all([loadComplaints(), state.staff ? null : loadStaff()]);
     } catch (error) {
       toast(`Could not load concerns: ${error.message}`, 'error');
       return;
@@ -395,9 +424,20 @@
   }
 
   function renderComplaints() {
-    const rows = state.complaints.filter((c) =>
-      state.complaintTab === 'open' ? OPEN_COMPLAINT(c.status)
-        : state.complaintTab === 'resolved' ? !OPEN_COMPLAINT(c.status) : true);
+    const rows = state.complaints.filter((c) => {
+      switch (state.complaintTab) {
+        case 'open': return OPEN_COMPLAINT(c.status);
+        case 'mine': return OPEN_COMPLAINT(c.status) && c.assigned_to === myId();
+        case 'unassigned': return OPEN_COMPLAINT(c.status) && !c.assigned_to;
+        case 'overdue': return isOverdue(c);
+        case 'resolved': return !OPEN_COMPLAINT(c.status);
+        default: return true;
+      }
+    });
+    // Most urgent first for open lists.
+    if (state.complaintTab !== 'resolved' && state.complaintTab !== '') {
+      rows.sort((a, b) => new Date(a.due_by || a.created_at) - new Date(b.due_by || b.created_at));
+    }
     setRows('complaintRows', 'complaintEmpty', rows.map((c) => {
       const [label, kind] = COMPLAINT_STATUS[c.status] || [c.status, 'info'];
       const user = c.users || {};
@@ -405,15 +445,26 @@
       const barangay = c.barangay || user.barangay;
       const update = el('button', { type: 'button', class: 'btn-sm primary' }, 'Update');
       update.addEventListener('click', () => void updateComplaint(c));
+      const assign = el('button', { type: 'button', class: 'btn-sm' }, c.assigned_to ? 'Reassign' : 'Assign');
+      assign.addEventListener('click', () => void assignComplaint(c));
       return el('tr', {},
         el('td', {}, el('strong', {}, c.complaint_type), el('span', { class: 'cell-sub mono' }, c.tracking_number),
           el('span', { class: 'note-line' }, c.description.length > 90 ? `${c.description.slice(0, 90)}…` : c.description)),
         el('td', {}, user.full_name || '—', el('span', { class: 'cell-sub' }, user.mobile_number || user.email || '')),
         el('td', {}, municipality ? `${barangay || ''}${barangay ? ', ' : ''}${municipality}` : el('span', { class: 'not-set' }, 'Not set')),
-        el('td', {}, fmtDate(c.created_at)),
+        el('td', {}, fmtDate(c.created_at), el('span', { class: 'cell-sub' }, slaBadge(c))),
+        el('td', {}, c.assigned_to ? el('span', { class: 'assignee' }, staffName(c.assigned_to)) : el('span', { class: 'assignee none' }, 'Unassigned')),
         el('td', {}, badge(label, kind)),
-        el('td', {}, el('div', { class: 'row-actions' }, update)));
-    }), state.complaintTab === 'open' ? 'No open concerns. Nice work!' : 'Nothing here.');
+        el('td', {}, el('div', { class: 'row-actions' }, update, assign)));
+    }), {
+      open: 'No open concerns. Nice work!',
+      mine: 'Nothing assigned to you right now.',
+      unassigned: 'Every open concern has someone on it.',
+      overdue: 'No overdue concerns. 🎉'
+    }[state.complaintTab] || 'Nothing here.');
+    const overdue = state.complaints.filter(isOverdue).length;
+    $('complaintOverdueCount').textContent = String(overdue);
+    $('complaintOverdueCount').classList.toggle('hidden', !overdue);
   }
 
   async function updateComplaint(complaint) {
@@ -438,6 +489,33 @@
     });
     if (done) {
       toast('Concern updated. The customer has been notified.', 'success');
+      await showComplaints();
+    }
+  }
+
+  async function assignComplaint(complaint) {
+    if (!needLive()) return;
+    if (!state.staff) await loadStaff().catch(() => { state.staff = []; });
+    const select = el('select', {},
+      new Option('Unassigned', ''),
+      ...state.staff.map((s) => {
+        const option = new Option(`${s.id === myId() ? `${s.name} (me)` : s.name}${s.department ? ` · ${s.department}` : ''}`, s.id);
+        option.selected = s.id === complaint.assigned_to;
+        return option;
+      }));
+    const done = await openModal({
+      title: `Assign concern ${complaint.tracking_number}`,
+      confirmText: 'Save',
+      content: [
+        el('p', { class: 'modal-summary' }, el('strong', {}, complaint.complaint_type), el('br'),
+          'Target: ', complaint.due_by ? fmtDate(complaint.due_by) : '—', ' · ', slaBadge(complaint)),
+        field('Assign to', select),
+        el('p', { class: 'muted small' }, 'The staff member gets a notification. Every change is kept in the audit log.')
+      ],
+      onConfirm: () => supabaseClient.rpc('assign_complaint', { p_complaint_id: complaint.id, p_assignee: select.value || null }, token())
+    });
+    if (done) {
+      toast(select.value ? `Assigned to ${staffName(select.value)}.` : 'Concern is now unassigned.', 'success');
       await showComplaints();
     }
   }
@@ -635,6 +713,135 @@
     }
   }
 
+  // ---------------------------------------------------------------- CSV bill import
+  // The file is read in the browser, checked by the server (import_bills with
+  // p_commit = false), shown as a preview, and only saved after "Import".
+  const IMPORT_COLUMNS = ['account_number', 'billing_month', 'due_date', 'total_amount', 'consumption_kwh'];
+  const COLUMN_ALIASES = {
+    account: 'account_number', account_no: 'account_number', accountno: 'account_number', account_number: 'account_number',
+    month: 'billing_month', billing_month: 'billing_month', period: 'billing_month',
+    due: 'due_date', due_date: 'due_date',
+    amount: 'total_amount', total: 'total_amount', total_amount: 'total_amount', amount_due: 'total_amount',
+    kwh: 'consumption_kwh', consumption: 'consumption_kwh', consumption_kwh: 'consumption_kwh'
+  };
+  let importRows = null;
+
+  function parseCsv(text) {
+    const clean = text.replace(/^﻿/, '');
+    const firstLine = clean.split(/\r?\n/, 1)[0] || '';
+    const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+    const rows = [];
+    let row = [];
+    let cell = '';
+    let quoted = false;
+    for (let i = 0; i < clean.length; i += 1) {
+      const ch = clean[i];
+      if (quoted) {
+        if (ch === '"' && clean[i + 1] === '"') { cell += '"'; i += 1; }
+        else if (ch === '"') quoted = false;
+        else cell += ch;
+      } else if (ch === '"') quoted = true;
+      else if (ch === delimiter) { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && clean[i + 1] === '\n') i += 1;
+        row.push(cell); rows.push(row); row = []; cell = '';
+      } else cell += ch;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter((r) => r.some((c) => c.trim() !== ''));
+  }
+
+  function csvToBillRows(text) {
+    const table = parseCsv(text);
+    if (table.length < 2) throw new Error('The file has no bill rows.');
+    const header = table[0].map((h) => COLUMN_ALIASES[h.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')] || null);
+    const missing = IMPORT_COLUMNS.slice(0, 4).filter((c) => !header.includes(c));
+    if (missing.length) throw new Error(`Missing column${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Use "Download template".`);
+    if (table.length - 1 > 2000) throw new Error(`The file has ${table.length - 1} rows. Import at most 2000 at a time.`);
+    return table.slice(1).map((cells) => {
+      const item = {};
+      header.forEach((name, index) => { if (name) item[name] = (cells[index] || '').trim(); });
+      return item;
+    });
+  }
+
+  function resetImport() {
+    importRows = null;
+    $('billCsv').value = '';
+    $('billCsvName').textContent = '';
+    $('billImportRows').replaceChildren();
+    ['billImportPreview', 'billImportSummary', 'billImportButton', 'billImportClear'].forEach((id) => $(id).classList.add('hidden'));
+  }
+
+  function renderImportResult(result, saved) {
+    const bad = result.total - result.valid;
+    const summary = $('billImportSummary');
+    summary.replaceChildren(
+      saved
+        ? el('span', { class: 'ok' }, `✓ Imported ${result.saved} bill${result.saved === 1 ? '' : 's'}. Customers have been notified.`)
+        : el('span', { class: result.valid ? 'ok' : 'bad' }, `${result.valid} of ${result.total} rows ready to import`),
+      bad ? el('span', {}, ' · ', el('span', { class: 'bad' }, `${bad} row${bad === 1 ? '' : 's'} ${saved ? 'skipped' : 'will be skipped'}`), ' (see the reason in red)') : '');
+    summary.classList.remove('hidden');
+    $('billImportRows').replaceChildren(...result.rows.map((r) => el('tr', { class: r.ok ? '' : 'row-bad' },
+      el('td', {}, String(r.row + 1)),
+      el('td', { class: 'mono' }, r.account_number || '—'),
+      el('td', {}, r.billing_month || '—'),
+      el('td', {}, r.due_date ? fmtDate(r.due_date, false) : '—'),
+      el('td', { class: 'mono' }, r.total_amount === null ? '—' : peso(r.total_amount)),
+      el('td', {}, r.consumption_kwh === null ? '—' : String(r.consumption_kwh)),
+      r.ok ? el('td', {}, badge(saved ? 'Imported' : 'OK', 'approved')) : el('td', { class: 'err' }, r.error))));
+    $('billImportPreview').classList.remove('hidden');
+    $('billImportClear').classList.remove('hidden');
+    $('billImportButton').classList.toggle('hidden', saved || !result.valid);
+    $('billImportButton').textContent = `Import ${result.valid} bill${result.valid === 1 ? '' : 's'}`;
+  }
+
+  $('billCsv').addEventListener('change', async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (!needLive()) { resetImport(); return; }
+    if (file.size > 2 * 1024 * 1024) { toast('That file is too large (max 2 MB).', 'error'); resetImport(); return; }
+    $('billCsvName').textContent = file.name;
+    try {
+      importRows = csvToBillRows(await file.text());
+      const result = await supabaseClient.rpc('import_bills', { p_rows: importRows, p_commit: false }, token());
+      renderImportResult(result, false);
+    } catch (error) {
+      toast(`Could not read the CSV: ${error.message}`, 'error');
+      resetImport();
+    }
+  });
+
+  $('billImportButton').addEventListener('click', async () => {
+    if (!importRows || !needLive()) return;
+    const button = $('billImportButton');
+    button.disabled = true;
+    try {
+      const result = await supabaseClient.rpc('import_bills', { p_rows: importRows, p_commit: true }, token());
+      importRows = null;
+      renderImportResult(result, true);
+      toast(`Imported ${result.saved} bill${result.saved === 1 ? '' : 's'}.`, 'success');
+      await showBills();
+    } catch (error) {
+      toast(`Import failed, nothing was saved: ${error.message}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $('billImportClear').addEventListener('click', resetImport);
+
+  $('billTemplate').addEventListener('click', () => {
+    const sample = state.verifiedAccounts[0] ? state.verifiedAccounts[0].account_number : 'OMECO-0000';
+    const lines = [IMPORT_COLUMNS.join(','), `${sample},2026-08,2026-09-15,2105.60,188`];
+    const blob = new Blob([`﻿${lines.join('\r\n')}\r\n`], { type: 'text/csv;charset=utf-8' });
+    const link = el('a', { href: URL.createObjectURL(blob), download: 'omeco-bills-template.csv' });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  });
+
   // ---------------------------------------------------------------- reports
   async function loadReportData() {
     await Promise.all([loadRequests(), loadComplaints(), loadCustomers(), ensureCoverage()]);
@@ -737,7 +944,7 @@
       el('td', {}, fmtDate(a.created_at, false)))));
     const describe = (entry) => {
       const d = entry.details || {};
-      return [d.account_number, d.tracking_number, d.title, d.billing_month, d.reason, d.from && d.to ? `${d.from} → ${d.to}` : null, d.area]
+      return [d.account_number, d.tracking_number, d.title, d.billing_month, d.reason, d.from && d.to ? `${d.from} → ${d.to}` : d.to ? `→ ${d.to}` : null, d.area]
         .filter(Boolean).join(' · ');
     };
     setRows('auditRows', 'auditEmpty', audit.map((entry) => el('tr', {},
@@ -936,7 +1143,7 @@
     stopLive();
     clearInterval(state.pollTimer);
     state.pollTimer = null;
-    Object.assign(state, { requests: [], complaints: [], announcements: [], bills: [], notifications: [], knownUnread: null });
+    Object.assign(state, { requests: [], complaints: [], announcements: [], bills: [], notifications: [], knownUnread: null, staff: null });
     window.pendingRequestsByUser = new Map();
     renderBell();
   };

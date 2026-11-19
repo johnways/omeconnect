@@ -35,6 +35,13 @@ git push
 
 Vercel publishes **both** sites automatically after each push.
 
+## Staff tools (admin console)
+
+- **Two-step verification is required for staff.** The first admin sign-in shows a QR code to add to Google/Microsoft Authenticator; every later sign-in asks for the 6-digit code. The database refuses admin data without it (`is_omeco_admin()` requires `aal2`). Lost phone: in Supabase SQL run `delete from auth.mfa_factors where user_id = '<admin user id>';` and set it up again at the next sign-in.
+- **Import bills from CSV** (Bills → Import many bills). Columns: `account_number, billing_month, due_date, total_amount, consumption_kwh`. The server checks every row first (preview), then saves only the valid rows; customers are notified.
+- **Concern assignment and target times.** Each concern gets a target (power interruption 4 h, low voltage 24 h, payment 48 h, billing 72 h, new connection 5 days, other 72 h; change them in `complaint_sla_hours`). Tabs: Assigned to me, Unassigned, Overdue.
+- **Customer list** loads in batches (no 1000-row limit) and shows 25/50/100 rows per page.
+
 ## Live updates and app updates
 - **Data changes appear instantly** in the customer app and admin dashboard (Supabase Realtime,
   `live.js`; tables listed in `database/phase12_realtime.sql`). Each user only receives changes

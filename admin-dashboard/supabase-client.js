@@ -75,9 +75,45 @@
       await request('/auth/v1/logout', { method: 'POST', accessToken });
     },
 
-    // Admin rights come only from the protected admin_accounts table.
+    // Admin rights come only from the protected admin_accounts table and
+    // need a session that passed the authenticator code (aal2).
     async isAdmin(accessToken) {
       return request('/rest/v1/rpc/is_omeco_admin', { method: 'POST', accessToken, body: {} });
+    },
+
+    // Is this an admin account at all (checked right after the password).
+    async isAdminAccount(accessToken) {
+      return request('/rest/v1/rpc/is_omeco_admin_account', { method: 'POST', accessToken, body: {} });
+    },
+
+    // ---- Authenticator app (required for staff) ----
+    async getUser(accessToken) {
+      return request('/auth/v1/user', { accessToken });
+    },
+
+    async enrollTotp(accessToken) {
+      const data = await request('/auth/v1/factors', {
+        method: 'POST',
+        accessToken,
+        body: { factor_type: 'totp', issuer: 'OMECOnnect Admin', friendly_name: `OMECOnnect Admin ${new Date().toISOString()}` }
+      });
+      const svg = data && data.totp && data.totp.qr_code;
+      return {
+        id: data.id,
+        secret: data.totp && data.totp.secret,
+        qrCodeUrl: svg && !svg.startsWith('data:') ? `data:image/svg+xml;utf-8,${encodeURIComponent(svg)}` : svg
+      };
+    },
+
+    // Challenge + verify. Returns a new session with aal2.
+    async verifyTotp(accessToken, factorId, code) {
+      const base = `/auth/v1/factors/${encodeURIComponent(factorId)}`;
+      const challenge = await request(`${base}/challenge`, { method: 'POST', accessToken, body: {} });
+      return request(`${base}/verify`, { method: 'POST', accessToken, body: { challenge_id: challenge.id, code } });
+    },
+
+    async unenrollFactor(accessToken, factorId) {
+      return request(`/auth/v1/factors/${encodeURIComponent(factorId)}`, { method: 'DELETE', accessToken });
     },
 
     async getServiceAreas() {
@@ -92,9 +128,20 @@
 
     // All customer profiles with their location and linked OMECO account (RLS: admins only).
     async getCustomers(accessToken) {
+      // The server returns at most 1000 rows per request, so read in batches.
+      const BATCH = 1000;
+      const readAllUsers = async () => {
+        const all = [];
+        for (let offset = 0; offset < 200000; offset += BATCH) {
+          const batch = await request('/rest/v1/users?select=id,full_name,email,mobile_number,municipality,barangay,created_at,' +
+            `customer_accounts(account_number,verification_status,service_area)&order=full_name.asc,id.asc&limit=${BATCH}&offset=${offset}`, { accessToken });
+          all.push(...batch);
+          if (batch.length < BATCH) break;
+        }
+        return all;
+      };
       const [users, admins] = await Promise.all([
-        request('/rest/v1/users?select=id,full_name,email,mobile_number,municipality,barangay,created_at,' +
-          'customer_accounts(account_number,verification_status,service_area)&order=full_name.asc', { accessToken }),
+        readAllUsers(),
         request('/rest/v1/admin_accounts?select=user_id', { accessToken })
       ]);
       const adminIds = new Set(admins.map((row) => row.user_id));

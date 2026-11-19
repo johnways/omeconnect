@@ -422,3 +422,63 @@ button:active:not(:disabled), .chip:active, .area-card:active { transform: scale
 /* Empty-table message under a panel's table */
 .empty-note { margin: 0; padding: 16px 20px; color: var(--muted, #64748b); font-size: 0.92rem; }
 .empty-note.hidden { display: none; }
+
+/* ---------- Two-step verification step on the sign-in card ---------- */
+.mfa-step { display: grid; gap: 14px; }
+.mfa-step.hidden { display: none; }
+.mfa-title { margin: 0; font-size: 1.15rem; color: var(--text); }
+.mfa-intro { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.mfa-steps { margin: 0; padding-left: 20px; color: var(--text); font-size: 0.9rem; display: grid; gap: 4px; }
+.mfa-enroll { display: grid; gap: 10px; justify-items: center; }
+.mfa-enroll.hidden { display: none; }
+.mfa-enroll .mfa-steps { justify-self: stretch; }
+.mfa-qr { width: 180px; height: 180px; background: #fff; border-radius: 12px; padding: 8px; border: 1px solid var(--line); }
+.mfa-secret-line { margin: 0; font-size: 0.8rem; color: var(--muted); text-align: center; word-break: break-all; }
+.mfa-secret-line code { font-size: 0.82rem; color: var(--text); }
+#mfaCode { letter-spacing: 0.4em; font-size: 1.2rem; text-align: center; }
+.mfa-cancel { justify-self: center; }
+
+/* ---------- Paging under long tables ---------- */
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.pager.hidden { display: none; }
+.pager-info { color: var(--muted); font-size: 0.88rem; }
+.pager-buttons { display: flex; gap: 8px; align-items: center; }
+.pager-buttons select { padding: 6px 8px; border-radius: 8px; }
+
+/* ---------- CSV bill import ---------- */
+.import-panel { margin-top: 18px; }
+.import-panel .panel-body { padding: 0 20px 20px; display: grid; gap: 12px; }
+.import-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.import-summary { margin: 0; font-size: 0.92rem; }
+.import-summary .ok { color: #15803d; font-weight: 700; }
+.import-summary .bad { color: #b91c1c; font-weight: 700; }
+.import-table td.err { color: #b91c1c; }
+.import-table tr.row-bad { background: rgba(220, 38, 38, 0.05); }
+.file-pick { position: relative; overflow: hidden; }
+.file-pick input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ---------- Concern assignment & response time ---------- */
+.sla { display: inline-block; font-size: 0.78rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.sla.ok { background: rgba(21, 128, 61, 0.1); color: #15803d; }
+.sla.soon { background: rgba(245, 163, 0, 0.16); color: #a16207; }
+.sla.late { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+.sla.done { background: rgba(100, 116, 139, 0.12); color: var(--muted); }
+.assignee { display: block; font-size: 0.82rem; }
+.assignee.none { color: var(--muted); font-style: italic; }
+[data-theme="dark"] .sla.ok { color: #4ade80; }
+[data-theme="dark"] .sla.soon { color: #fbbf24; }
+[data-theme="dark"] .sla.late { color: #f87171; }
+[data-theme="dark"] .import-summary .ok { color: #4ade80; }
+[data-theme="dark"] .import-summary .bad, [data-theme="dark"] .import-table td.err { color: #f87171; }
+.tab-count.overdue-count { background: #dc2626; color: #fff; }
+.tab-count.hidden { display: none; }
+
+/* 2FA step matches the sign-in form */
+#mfaForm > label { display: flex; flex-direction: column; gap: 8px; font-weight: 600; color: #334155; font-size: 0.85rem; }
+#mfaForm input { border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; padding: 12px 14px; }
+#mfaForm input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22, 82, 197, 0.16); }
+#mfaButton { background: var(--primary); color: #fff; padding: 12px 16px; border-radius: 10px; font-weight: 700; }
+#mfaButton:hover { background: var(--navy-700); }
+#mfaButton:disabled { opacity: 0.6; cursor: wait; }
+[data-theme="dark"] #mfaForm > label { color: var(--muted); }
+[data-theme="dark"] #mfaForm input { background: #0d1627; border-color: #31425f; color: var(--text); }

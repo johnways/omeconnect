@@ -24,6 +24,7 @@ let coverage = new Map();      // municipality -> [barangays] in OMECO order
 let customers = [];
 const filters = { municipality: '', barangay: '', status: '', search: '' };
 const NO_LOCATION = '__none__';
+const paging = { page: 1, size: 50, sig: '' }; // customer table pages
 
 function setScreen(screenName) {
   loginScreen.classList.toggle('active', screenName === 'login');
@@ -55,12 +56,105 @@ async function loginUser(email, password) {
   const result = await supabaseClient.signInWithPassword({ email, password });
   if (!result || !result.access_token) throw new Error('Sign-in did not return a session.');
 
-  const isAdmin = await supabaseClient.isAdmin(result.access_token);
-  if (isAdmin !== true) {
+  const isAdminAccount = await supabaseClient.isAdminAccount(result.access_token);
+  if (isAdminAccount !== true) {
     await supabaseClient.signOut(result.access_token).catch(() => {});
     throw new Error('This account is not an OMECO administrator.');
   }
-  session = result;
+
+  // Staff must always pass an authenticator code (two-step verification).
+  const user = await supabaseClient.getUser(result.access_token);
+  const factors = (user && user.factors) || [];
+  const verified = factors.find((f) => f.factor_type === 'totp' && f.status === 'verified');
+  if (verified) {
+    startMfaStep({ session: result, factorId: verified.id, enrolling: false });
+    return false;
+  }
+  // First time: remove unfinished setups, then show a new QR code.
+  for (const stale of factors.filter((f) => f.status !== 'verified')) {
+    await supabaseClient.unenrollFactor(result.access_token, stale.id).catch(() => {});
+  }
+  const enrollment = await supabaseClient.enrollTotp(result.access_token);
+  startMfaStep({ session: result, factorId: enrollment.id, enrolling: true, enrollment });
+  return false;
+}
+
+// ---------------------------------------------------------------- Two-step step
+let pendingMfa = null;
+const mfaForm = document.getElementById('mfaForm');
+
+function startMfaStep(pending) {
+  pendingMfa = pending;
+  loginForm.classList.add('hidden');
+  mfaForm.classList.remove('hidden');
+  document.getElementById('mfaEnroll').classList.toggle('hidden', !pending.enrolling);
+  document.getElementById('mfaTitle').textContent = pending.enrolling
+    ? 'Set up two-step verification' : 'Two-step verification';
+  document.getElementById('mfaIntro').textContent = pending.enrolling
+    ? 'Staff accounts must use an authenticator app. This is a one-time setup.'
+    : 'Open your authenticator app and enter the 6-digit code for OMECOnnect Admin.';
+  if (pending.enrolling) {
+    document.getElementById('mfaQr').src = pending.enrollment.qrCodeUrl || '';
+    document.getElementById('mfaSecret').textContent = pending.enrollment.secret || '';
+  }
+  document.getElementById('mfaButton').textContent = pending.enrolling ? 'Verify and finish setup' : 'Verify';
+  const code = document.getElementById('mfaCode');
+  code.value = '';
+  setTimeout(() => code.focus(), 50);
+}
+
+function endMfaStep() {
+  pendingMfa = null;
+  mfaForm.classList.add('hidden');
+  loginForm.classList.remove('hidden');
+  document.getElementById('mfaQr').removeAttribute('src');
+  document.getElementById('mfaSecret').textContent = '';
+}
+
+mfaForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!pendingMfa) return;
+  showLoginMessage('');
+  const code = document.getElementById('mfaCode').value.replace(/\s+/g, '');
+  if (!/^\d{6}$/.test(code)) {
+    showLoginMessage('Enter the 6-digit code from your authenticator app.');
+    return;
+  }
+  const button = document.getElementById('mfaButton');
+  button.disabled = true;
+  try {
+    const upgraded = await supabaseClient.verifyTotp(pendingMfa.session.access_token, pendingMfa.factorId, code);
+    if (!upgraded || !upgraded.access_token) throw new Error('Verification did not return a session.');
+    if ((await supabaseClient.isAdmin(upgraded.access_token)) !== true) {
+      throw new Error('Two-step verification passed, but admin access was not granted. Contact your system administrator.');
+    }
+    session = upgraded;
+    endMfaStep();
+    loginForm.reset();
+    enterDashboard();
+  } catch (error) {
+    const text = String(error.message || '');
+    showLoginMessage(/invalid|expired|code/i.test(text) ? 'That code is wrong or expired. Wait for a new code and try again.' : text || 'Verification failed.');
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.getElementById('mfaCancel').addEventListener('click', async () => {
+  const pending = pendingMfa;
+  endMfaStep();
+  loginForm.reset();
+  showLoginMessage('');
+  if (pending) {
+    if (pending.enrolling) await supabaseClient.unenrollFactor(pending.session.access_token, pending.factorId).catch(() => {});
+    await supabaseClient.signOut(pending.session.access_token).catch(() => {});
+  }
+});
+
+function enterDashboard() {
+  setScreen('dashboard');
+  if (window.adminOnSignIn) void window.adminOnSignIn();
+  setView('overviewView');
 }
 
 async function logoutUser() {
@@ -81,10 +175,9 @@ loginForm.addEventListener('submit', async (event) => {
   const button = document.getElementById('loginButton');
   button.disabled = true;
   try {
-    await loginUser(document.getElementById('email').value.trim(), document.getElementById('password').value);
-    setScreen('dashboard');
-    if (window.adminOnSignIn) void window.adminOnSignIn();
-    setView('overviewView');
+    const done = await loginUser(document.getElementById('email').value.trim(), document.getElementById('password').value);
+    document.getElementById('password').value = '';
+    if (done !== false) enterDashboard();
   } catch (error) {
     showLoginMessage(error.message || 'Unable to sign in.');
   } finally {
@@ -221,6 +314,13 @@ function renderCustomers() {
   barangaySelect.disabled = !realMunicipality;
 
   const rows = customers.filter((customer) => matchesFilters(customer));
+  // Page through long lists; any filter change goes back to page 1.
+  const sig = JSON.stringify(filters);
+  if (sig !== paging.sig) { paging.sig = sig; paging.page = 1; }
+  const pageCount = Math.max(1, Math.ceil(rows.length / paging.size));
+  paging.page = Math.min(Math.max(1, paging.page), pageCount);
+  const firstIndex = (paging.page - 1) * paging.size;
+  const pageRows = rows.slice(firstIndex, firstIndex + paging.size);
   const pinIcon = () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('viewBox', '0 0 24 24');
@@ -230,7 +330,7 @@ function renderCustomers() {
   };
   const initialsOf = (name) => (name || '?').split(/\s+/).filter((part) => /^[A-Za-zÀ-ÿ]/.test(part))
     .map((part) => part[0].toUpperCase()).slice(0, 2).join('') || '?';
-  document.getElementById('customerRows').replaceChildren(...rows.map((customer) => {
+  document.getElementById('customerRows').replaceChildren(...pageRows.map((customer) => {
     const status = accountStatus(customer);
     const badgeClass = { verified: 'approved', pending: 'pending', none: 'none' }[status.key];
     const location = customer.municipality
@@ -259,7 +359,28 @@ function renderCustomers() {
     ? 'No consumers match these filters.'
     : 'No customers have registered yet. They will appear here after signing up in the OMECOnnect app.';
   document.getElementById('customersEmpty').classList.toggle('hidden', rows.length > 0);
+
+  const pager = document.getElementById('customerPager');
+  pager.classList.toggle('hidden', rows.length <= 25);
+  document.getElementById('customerPageInfo').textContent = rows.length
+    ? `Rows ${firstIndex + 1}–${firstIndex + pageRows.length} of ${rows.length} · page ${paging.page} of ${pageCount}`
+    : '';
+  document.getElementById('customerPrev').disabled = paging.page <= 1;
+  document.getElementById('customerNext').disabled = paging.page >= pageCount;
 }
+
+function goToCustomerPage(delta) {
+  paging.page += delta;
+  renderCustomers();
+  document.getElementById('customerRows').closest('.table-panel').scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+document.getElementById('customerPrev').addEventListener('click', () => goToCustomerPage(-1));
+document.getElementById('customerNext').addEventListener('click', () => goToCustomerPage(1));
+document.getElementById('customerPageSize').addEventListener('change', (event) => {
+  paging.size = Number(event.target.value) || 50;
+  paging.page = 1;
+  renderCustomers();
+});
 
 async function loadCustomers() {
   const summary = document.getElementById('customerSummary');

@@ -39,6 +39,26 @@
             <button type="submit" id="loginButton">Sign In</button>
           </form>
 
+          <form id="mfaForm" class="mfa-step hidden" novalidate>
+            <h2 id="mfaTitle" class="mfa-title">Two-step verification</h2>
+            <p id="mfaIntro" class="mfa-intro">Open your authenticator app and enter the 6-digit code for OMECOnnect Admin.</p>
+            <div id="mfaEnroll" class="mfa-enroll hidden">
+              <ol class="mfa-steps">
+                <li>Install <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> on your phone.</li>
+                <li>Tap <strong>+</strong> and scan this QR code.</li>
+                <li>Type the 6-digit code it shows below.</li>
+              </ol>
+              <img id="mfaQr" class="mfa-qr" alt="QR code to add OMECOnnect Admin to your authenticator app" width="180" height="180" />
+              <p class="mfa-secret-line">Can't scan? Enter this key: <code id="mfaSecret"></code></p>
+            </div>
+            <label>
+              6-digit code
+              <input id="mfaCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="123456" />
+            </label>
+            <button type="submit" id="mfaButton">Verify</button>
+            <button type="button" id="mfaCancel" class="link-btn mfa-cancel">Cancel and sign out</button>
+          </form>
+
           <p id="loginMessage" class="login-message hidden" role="alert"></p>
           <div id="demoNote" class="demo-note hidden">
             Demo mode: admin@omeco.test / admin123 (sample data only)
@@ -196,6 +216,19 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
                 <p id="customersEmptyText"></p>
               </div>
+              <div id="customerPager" class="pager hidden">
+                <span id="customerPageInfo" class="pager-info"></span>
+                <div class="pager-buttons">
+                  <label class="sr-only" for="customerPageSize">Rows per page</label>
+                  <select id="customerPageSize">
+                    <option value="25">25 per page</option>
+                    <option value="50" selected>50 per page</option>
+                    <option value="100">100 per page</option>
+                  </select>
+                  <button type="button" class="light-btn" id="customerPrev">‹ Previous</button>
+                  <button type="button" class="light-btn" id="customerNext">Next ›</button>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -293,7 +326,7 @@
             <div class="page-head">
               <div>
                 <h3 class="page-title">Concerns</h3>
-                <p class="page-sub">Update a concern's status. The customer is notified each time.</p>
+                <p class="page-sub">Assign each concern to a staff member and resolve it before its target time. The customer is notified of every status change.</p>
               </div>
               <div class="panel-actions">
                 <button class="light-btn icon-btn" type="button" data-refresh="complaints">Refresh</button>
@@ -302,13 +335,16 @@
             <div class="panel table-panel">
               <div class="tab-row" id="complaintTabs">
                 <button type="button" class="tab active" data-status="open">Open <span class="tab-count" id="complaintOpenCount">0</span></button>
+                <button type="button" class="tab" data-status="mine">Assigned to me</button>
+                <button type="button" class="tab" data-status="unassigned">Unassigned</button>
+                <button type="button" class="tab" data-status="overdue">Overdue <span class="tab-count overdue-count hidden" id="complaintOverdueCount">0</span></button>
                 <button type="button" class="tab" data-status="resolved">Resolved / closed</button>
                 <button type="button" class="tab" data-status="">All</button>
               </div>
               <div class="table-wrap">
                 <table class="consumer-table">
                   <thead>
-                    <tr><th>Concern</th><th>Customer</th><th>Location</th><th>Submitted</th><th>Status</th><th class="actions-col">Action</th></tr>
+                    <tr><th>Concern</th><th>Customer</th><th>Location</th><th>Submitted · target</th><th>Assigned to</th><th>Status</th><th class="actions-col">Action</th></tr>
                   </thead>
                   <tbody id="complaintRows"></tbody>
                 </table>
@@ -405,6 +441,34 @@
                   </table>
                 </div>
                 <p id="billEmpty" class="empty-note hidden">No bills yet.</p>
+              </div>
+            </div>
+
+            <div class="panel import-panel">
+              <div class="panel-header">
+                <h3>Import many bills (CSV)</h3>
+                <button type="button" class="light-btn" id="billTemplate">Download template</button>
+              </div>
+              <div class="panel-body">
+                <p class="muted small">Export the month's bills from the billing system as a CSV with these columns:
+                  <code>account_number, billing_month, due_date, total_amount, consumption_kwh</code>.
+                  Month can be <code>2026-08</code> or <code>August 2026</code>; due date <code>2026-09-15</code>.
+                  Nothing is saved until you check the preview and press Import. Up to 2000 rows at a time.</p>
+                <div class="import-actions">
+                  <span class="light-btn file-pick">Choose CSV file…<input type="file" id="billCsv" accept=".csv,text/csv" /></span>
+                  <span id="billCsvName" class="muted small"></span>
+                  <button type="button" class="primary-btn hidden" id="billImportButton">Import</button>
+                  <button type="button" class="light-btn hidden" id="billImportClear">Clear</button>
+                </div>
+                <p id="billImportSummary" class="import-summary hidden" role="status"></p>
+                <div class="table-wrap hidden" id="billImportPreview">
+                  <table class="consumer-table import-table">
+                    <thead>
+                      <tr><th>Row</th><th>Account</th><th>Month</th><th>Due</th><th>Amount</th><th>kWh</th><th>Check</th></tr>
+                    </thead>
+                    <tbody id="billImportRows"></tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </section>

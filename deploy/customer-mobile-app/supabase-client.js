@@ -317,7 +317,7 @@
     },
 
     async isAdmin(accessToken) {
-      return restRequest('rpc/is_omeco_admin', {}, accessToken, {
+      return restRequest('rpc/is_omeco_admin_account', {}, accessToken, {
         method: 'POST',
         body: {}
       });
