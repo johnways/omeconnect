@@ -73,6 +73,7 @@
     'Photo from your Google account': 'Larawan mula sa iyong Google account',
     'No photo yet': 'Wala pang larawan',
     'Uploading…': 'Ina-upload…',
+    'Any photo up to 50 MB (JPG, PNG, HEIC on iPhone).': 'Kahit anong larawan hanggang 50 MB (JPG, PNG, HEIC sa iPhone).',
     'Profile photo updated.': 'Na-update ang larawan sa profile.',
     'Photo removed.': 'Naalis ang larawan.',
     'Photo removed. Showing your Google photo.': 'Naalis ang larawan. Ipinapakita ang larawan mula sa Google.',

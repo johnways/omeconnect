@@ -185,24 +185,51 @@ function renderAvatars() {
   }
 }
 
-// Square-crops and shrinks the picture to a 320 px JPEG in the browser.
+// Big photos (10, 20, 50 MB) are fine: only a small copy is uploaded.
+const MAX_PHOTO_MB = 50;
+
+// Fallback decoder: an <img> can open formats createImageBitmap cannot
+// (e.g. iPhone HEIC photos in Safari). Uses a data: URL, which the page allows.
+function decodeWithImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read failed'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('decode failed'));
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Square-crops and shrinks the picture to a 512 px JPEG in the browser.
 // Re-drawing also drops hidden data such as the phone's GPS location.
 async function preparePhoto(file) {
   let bitmap;
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
   } catch {
-    throw new Error('This picture format is not supported. Please choose a JPG or PNG photo.');
+    try {
+      bitmap = await decodeWithImage(file);
+    } catch {
+      throw new Error('This picture format is not supported. Please choose a JPG or PNG photo.');
+    }
   }
-  const size = 320;
-  const side = Math.min(bitmap.width, bitmap.height);
+  const width = bitmap.naturalWidth || bitmap.width;
+  const height = bitmap.naturalHeight || bitmap.height;
+  if (!width || !height) throw new Error('This picture could not be opened.');
+  const side = Math.min(width, height);
+  const size = Math.max(64, Math.min(512, side));
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d');
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, size, size);
-  context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(bitmap, (width - side) / 2, (height - side) / 2, side, side, 0, 0, size, size);
   if (bitmap.close) bitmap.close();
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.86));
   if (!blob) throw new Error('Could not prepare the photo.');
@@ -227,8 +254,8 @@ async function changeProfilePhoto(file) {
     setPhotoStatus('Please choose a picture file.', 'error');
     return;
   }
-  if (file.size > 15 * 1024 * 1024) {
-    setPhotoStatus('That picture is too large (max 15 MB).', 'error');
+  if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
+    setPhotoStatus(`That picture is too large (max ${MAX_PHOTO_MB} MB).`, 'error');
     return;
   }
   const button = document.getElementById('changePhotoButton');
