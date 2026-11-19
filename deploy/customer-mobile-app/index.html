@@ -437,12 +437,22 @@
 
         <div class="card profile-card">
           <div class="profile-top">
-            <div class="avatar large">MS</div>
+            <label class="avatar-edit" for="photoInput" title="Change profile photo">
+              <span class="avatar large">MS</span>
+              <span class="avatar-camera" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" /></svg></span>
+            </label>
             <div>
               <strong id="profileName">Customer</strong>
               <small id="profileEmail"></small>
+              <small id="photoSource" class="photo-source">No photo yet</small>
             </div>
           </div>
+          <div class="photo-actions">
+            <label id="changePhotoButton" class="secondary-btn photo-btn" for="photoInput">Change photo</label>
+            <input id="photoInput" class="sr-only" type="file" accept="image/*" />
+            <button id="removePhotoButton" class="link-btn hidden" type="button">Remove photo</button>
+          </div>
+          <p id="photoStatus" class="photo-status hidden" role="status"></p>
 
           <form id="verifyAccountForm" class="card form-card hidden">
             <h3>Link your OMECO account</h3>

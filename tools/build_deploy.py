@@ -68,7 +68,7 @@ def main() -> None:
         "default-src 'self'",
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data:",
+        "img-src 'self' data: https://*.googleusercontent.com",  # Google profile photos
         f"connect-src 'self' {supabase_url} {supabase_url.replace('https://', 'wss://', 1)}",
         "font-src 'self'",
         "object-src 'none'",

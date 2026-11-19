@@ -338,7 +338,7 @@
     async getCustomerData({ userId, accessToken }) {
       const profilePromise = restRequest('users', {
         id: `eq.${userId}`,
-        select: 'id,full_name,email,mobile_number,municipality,barangay'
+        select: 'id,full_name,email,mobile_number,municipality,barangay,avatar_path'
       }, accessToken);
 
       const accountPromise = restRequest('customer_accounts', {
@@ -438,6 +438,59 @@
         order: 'created_at.desc',
         limit: '50'
       }, accessToken);
+    },
+
+    // ---- Profile photo (private Storage bucket "avatars", own folder only) ----
+    async uploadAvatar({ userId, blob, accessToken }) {
+      const path = `${userId}/avatar-${Date.now()}.jpg`;
+      const response = await fetch(`${getBaseUrl()}/storage/v1/object/avatars/${path}`, {
+        method: 'POST',
+        headers: {
+          apikey: config.supabaseAnonKey,
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'image/jpeg',
+          'x-upsert': 'true',
+          'cache-control': '3600'
+        },
+        body: blob
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        let message = `Upload failed (${response.status}).`;
+        try { message = JSON.parse(text).message || message; } catch { /* keep default */ }
+        throw new Error(message);
+      }
+      return path;
+    },
+
+    // Returns the photo as a data: URL (the page only allows data: images).
+    async downloadAvatar({ path, accessToken }) {
+      const response = await fetch(`${getBaseUrl()}/storage/v1/object/authenticated/avatars/${path}`, {
+        headers: { apikey: config.supabaseAnonKey, Authorization: `Bearer ${accessToken}` }
+      });
+      if (!response.ok) throw new Error(`Could not load the photo (${response.status}).`);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Could not read the photo.'));
+        reader.readAsDataURL(blob);
+      });
+    },
+
+    async deleteAvatarFile({ path, accessToken }) {
+      await fetch(`${getBaseUrl()}/storage/v1/object/avatars/${path}`, {
+        method: 'DELETE',
+        headers: { apikey: config.supabaseAnonKey, Authorization: `Bearer ${accessToken}` }
+      });
+    },
+
+    async setAvatarPath({ userId, path, accessToken }) {
+      return restRequest('users', { id: `eq.${userId}` }, accessToken, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: { avatar_path: path }
+      });
     },
 
     async updateLocation({ userId, municipality, barangay, accessToken }) {

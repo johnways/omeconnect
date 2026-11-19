@@ -112,6 +112,167 @@ function renderDashboard() {
   renderChat(currentCustomer.chatHistory);
 }
 
+// ---------------------------------------------------------------- Profile photo
+// Order: the customer's own uploaded photo, then their Google photo, then initials.
+function customerInitials() {
+  if (appConfig.demoMode) return 'DU';
+  return ((currentCustomer && currentCustomer.fullName) || 'Customer')
+    .split(/\s+/).filter((part) => /^[A-Za-z]/.test(part))
+    .map((part) => part[0].toUpperCase()).slice(0, 2).join('') || 'C';
+}
+
+// Google profile picture from the sign-in identity (only Google's image host).
+function googlePhotoFrom(user) {
+  const identities = (user && user.identities) || [];
+  const google = identities.find((identity) => identity.provider === 'google');
+  const data = (google && google.identity_data) || {};
+  const metadata = (user && user.user_metadata) || {};
+  const candidate = data.avatar_url || data.picture || metadata.avatar_url || metadata.picture || '';
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== 'https:' || !/(^|\.)googleusercontent\.com$/.test(url.hostname)) return '';
+    return url.href.replace(/=s\d+-c$/, '=s256-c'); // sharper than the default 96 px
+  } catch {
+    return '';
+  }
+}
+
+let avatarLoading = '';
+function renderAvatars() {
+  const own = currentCustomer && currentCustomer.avatarPath;
+  // The uploaded photo is private, so it is fetched with the sign-in (once per path).
+  if (own && currentCustomer.ownPhotoFor !== own && avatarLoading !== own && currentSession) {
+    avatarLoading = own;
+    supabaseClient.downloadAvatar({ path: own, accessToken: currentSession.access_token })
+      .then((dataUrl) => {
+        if (currentCustomer && currentCustomer.avatarPath === own) {
+          currentCustomer.ownPhoto = dataUrl;
+          currentCustomer.ownPhotoFor = own;
+          renderAvatars();
+        }
+      })
+      .catch((error) => console.warn(error.message))
+      .finally(() => { if (avatarLoading === own) avatarLoading = ''; });
+  }
+  const photo = own && currentCustomer.ownPhotoFor === own ? currentCustomer.ownPhoto
+    : (currentCustomer && currentCustomer.googlePhoto) || '';
+  const initials = customerInitials();
+  document.querySelectorAll('.avatar').forEach((avatar) => {
+    const existing = avatar.querySelector('img');
+    if (photo) {
+      if (!existing || existing.getAttribute('src') !== photo) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        img.decoding = 'async';
+        // If the Google photo cannot load, fall back to initials.
+        img.addEventListener('error', () => { avatar.classList.remove('has-photo'); avatar.textContent = initials; });
+        img.src = photo;
+        avatar.replaceChildren(img);
+      }
+      avatar.classList.add('has-photo');
+    } else {
+      avatar.classList.remove('has-photo');
+      avatar.textContent = initials;
+    }
+  });
+  const removeButton = document.getElementById('removePhotoButton');
+  if (removeButton) removeButton.classList.toggle('hidden', !own);
+  const source = document.getElementById('photoSource');
+  if (source) {
+    source.textContent = own ? 'Your photo'
+      : currentCustomer && currentCustomer.googlePhoto ? 'Photo from your Google account' : 'No photo yet';
+  }
+}
+
+// Square-crops and shrinks the picture to a 320 px JPEG in the browser.
+// Re-drawing also drops hidden data such as the phone's GPS location.
+async function preparePhoto(file) {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch {
+    throw new Error('This picture format is not supported. Please choose a JPG or PNG photo.');
+  }
+  const size = 320;
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d');
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, size, size);
+  context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size);
+  if (bitmap.close) bitmap.close();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.86));
+  if (!blob) throw new Error('Could not prepare the photo.');
+  return { blob, dataUrl: canvas.toDataURL('image/jpeg', 0.86) };
+}
+
+function setPhotoStatus(text, kind) {
+  const status = document.getElementById('photoStatus');
+  if (!status) return;
+  status.textContent = text;
+  status.className = `photo-status ${kind || ''}`.trim();
+  status.classList.toggle('hidden', !text);
+}
+
+async function changeProfilePhoto(file) {
+  if (!file || !currentCustomer) return;
+  if (appConfig.demoMode || !currentSession) {
+    setPhotoStatus('Photos need a real account (not demo mode).', 'error');
+    return;
+  }
+  if (file.type && !/^image\//.test(file.type)) {
+    setPhotoStatus('Please choose a picture file.', 'error');
+    return;
+  }
+  if (file.size > 15 * 1024 * 1024) {
+    setPhotoStatus('That picture is too large (max 15 MB).', 'error');
+    return;
+  }
+  const button = document.getElementById('changePhotoButton');
+  button.classList.add('busy');
+  setPhotoStatus('Uploading…');
+  try {
+    const { blob, dataUrl } = await preparePhoto(file);
+    const userId = currentSession.user.id;
+    const accessToken = currentSession.access_token;
+    const oldPath = currentCustomer.avatarPath;
+    const path = await supabaseClient.uploadAvatar({ userId, blob, accessToken });
+    await supabaseClient.setAvatarPath({ userId, path, accessToken });
+    if (oldPath && oldPath !== path) void supabaseClient.deleteAvatarFile({ path: oldPath, accessToken }).catch(() => {});
+    Object.assign(currentCustomer, { avatarPath: path, ownPhoto: dataUrl, ownPhotoFor: path });
+    renderAvatars();
+    setPhotoStatus('Profile photo updated.', 'success');
+  } catch (error) {
+    setPhotoStatus(`Could not update the photo: ${error.message}`, 'error');
+  } finally {
+    button.classList.remove('busy');
+  }
+}
+
+async function removeProfilePhoto() {
+  if (!currentCustomer || !currentCustomer.avatarPath || !currentSession) return;
+  const oldPath = currentCustomer.avatarPath;
+  try {
+    await supabaseClient.setAvatarPath({ userId: currentSession.user.id, path: null, accessToken: currentSession.access_token });
+    void supabaseClient.deleteAvatarFile({ path: oldPath, accessToken: currentSession.access_token }).catch(() => {});
+    Object.assign(currentCustomer, { avatarPath: '', ownPhoto: '', ownPhotoFor: '' });
+    renderAvatars();
+    setPhotoStatus(currentCustomer.googlePhoto ? 'Photo removed. Showing your Google photo.' : 'Photo removed.', 'success');
+  } catch (error) {
+    setPhotoStatus(`Could not remove the photo: ${error.message}`, 'error');
+  }
+}
+
+document.getElementById('photoInput').addEventListener('change', (event) => {
+  const file = event.target.files && event.target.files[0];
+  event.target.value = '';
+  void changeProfilePhoto(file);
+});
+document.getElementById('removePhotoButton').addEventListener('click', () => void removeProfilePhoto());
+
 // Account card, balances and profile fields (safe to call on every refresh).
 function renderAccountSummary() {
   const account = currentCustomer.account;
@@ -128,12 +289,7 @@ function renderAccountSummary() {
     latestBill && latestBill.due_date ? `Due ${formatDate(latestBill.due_date)}` : 'No bill due';
   document.getElementById('accountLabel').textContent =
     appConfig.demoMode ? 'Demo account' : (account ? 'Verified account' : 'Not linked yet');
-  const initials = (currentCustomer.fullName || 'Customer')
-    .split(/\s+/).filter((part) => /^[A-Za-z]/.test(part))
-    .map((part) => part[0].toUpperCase()).slice(0, 2).join('') || 'C';
-  document.querySelectorAll('.avatar').forEach((avatar) => {
-    avatar.textContent = appConfig.demoMode ? 'DU' : initials;
-  });
+  renderAvatars();
   document.getElementById('demoDashboardBanner').classList.toggle('hidden', !appConfig.demoMode);
   document.getElementById('maskedAccountNumber').textContent =
     accountNumber ? `•••• ${accountNumber.slice(-5)}` : 'Account pending verification';
@@ -337,6 +493,7 @@ async function refreshCustomerData() {
     const knownIds = new Set(currentCustomer.notifications.map((n) => n.id));
     const fresh = (data.notifications || []).filter((n) => !knownIds.has(n.id) && !n.is_read);
     Object.assign(currentCustomer, {
+      avatarPath: data.profile ? data.profile.avatar_path || '' : currentCustomer.avatarPath,
       account: data.account,
       bills: data.bills || [],
       announcements: data.announcements || [],
@@ -932,6 +1089,8 @@ async function loadCustomerFromSession(session, fallbackEmail) {
     id: session.user.id,
     email: data.profile.email || fallbackEmail || data.profile.mobile_number || '',
     fullName: data.profile.full_name || 'Customer',
+    avatarPath: data.profile.avatar_path || '',
+    googlePhoto: googlePhotoFrom(session.user),
     municipality: data.profile.municipality || '',
     barangay: data.profile.barangay || '',
     totpFactors,
@@ -1874,7 +2033,7 @@ if (appConfig.demoMode) {
   const demoNote = document.getElementById('demoNote');
   demoNote.textContent = `Local demo only — ${demoAccount.email} / ${demoAccount.password}. Do not use for real accounts.`;
   demoNote.classList.remove('hidden');
-  document.querySelector('.avatar').textContent = 'DU';
+  document.querySelectorAll('.avatar').forEach((avatar) => { avatar.textContent = 'DU'; });
 }
 
 // ---------------------------------------------------------------- Mobile app

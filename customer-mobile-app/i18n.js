@@ -65,6 +65,17 @@
     'No bill': 'Walang bill',
     'Unpaid': 'Hindi pa bayad',
     'Paid': 'Bayad na',
+    // Profile photo
+    'Change photo': 'Palitan ang larawan',
+    'Change profile photo': 'Palitan ang larawan sa profile',
+    'Remove photo': 'Alisin ang larawan',
+    'Your photo': 'Iyong larawan',
+    'Photo from your Google account': 'Larawan mula sa iyong Google account',
+    'No photo yet': 'Wala pang larawan',
+    'Uploading…': 'Ina-upload…',
+    'Profile photo updated.': 'Na-update ang larawan sa profile.',
+    'Photo removed.': 'Naalis ang larawan.',
+    'Photo removed. Showing your Google photo.': 'Naalis ang larawan. Ipinapakita ang larawan mula sa Google.',
     // Bill statuses as stored in the database (lowercase)
     'unpaid': 'hindi pa bayad',
     'paid': 'bayad na',
