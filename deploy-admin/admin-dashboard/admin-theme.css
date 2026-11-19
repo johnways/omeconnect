@@ -258,6 +258,140 @@ button:active:not(:disabled), .chip:active, .area-card:active { transform: scale
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+/* ==========================================================================
+   Light / dark mode switch (top bar and sign-in screen)
+   ========================================================================== */
+.theme-toggle {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.theme-toggle svg {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.4s cubic-bezier(0.2, 1.2, 0.4, 1), opacity 0.25s ease;
+}
+.theme-toggle .i-sun { opacity: 0; transform: rotate(-90deg) scale(0.4); }
+[data-theme="dark"] .theme-toggle .i-moon { opacity: 0; transform: rotate(90deg) scale(0.4); }
+[data-theme="dark"] .theme-toggle .i-sun { opacity: 1; transform: none; color: #fcd34d; }
+@media (hover: hover) { .theme-toggle:hover { transform: rotate(-12deg) scale(1.05); } }
+.login-theme {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+#loginScreen { position: relative; }
+.theme-changing, .theme-changing *, .theme-changing *::before, .theme-changing *::after {
+  transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease !important;
+}
+
+/* ==========================================================================
+   DARK MODE — admin console
+   ========================================================================== */
+:root[data-theme="dark"] {
+  --text: #e7eef8;
+  --muted: #8d9db5;
+  --line: #22304a;
+  --secondary: #0d1627;
+  --blue-soft: rgba(59, 123, 242, 0.16);
+  --yellow-soft: rgba(245, 163, 0, 0.14);
+  --green-soft: rgba(52, 196, 106, 0.15);
+  --primary: #3b7bf2;
+  --danger: #f06464;
+  --success: #34c46a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+[data-theme="dark"] body { background: #0a1220; color: var(--text); }
+[data-theme="dark"] #loginScreen.active {
+  background:
+    radial-gradient(900px 500px at 0% 0%, rgba(245, 163, 0, 0.10), transparent 60%),
+    linear-gradient(150deg, #050c1c, #0b2150);
+}
+[data-theme="dark"] .sidebar { background: linear-gradient(180deg, #050c1c, #0a1a3d); }
+[data-theme="dark"] .topbar { background: rgba(14, 23, 40, 0.96); border-color: var(--line); }
+[data-theme="dark"] .topbar h2,
+[data-theme="dark"] .brand-box h1,
+[data-theme="dark"] .kpi strong,
+[data-theme="dark"] .stat-card strong { color: #9cc2ff; }
+
+/* Cards, panels, menus and dialogs */
+[data-theme="dark"] .login-card,
+[data-theme="dark"] .panel,
+[data-theme="dark"] .kpi,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .area-card,
+[data-theme="dark"] .bell-panel,
+[data-theme="dark"] .bell-item,
+[data-theme="dark"] .tab.active,
+[data-theme="dark"] dialog,
+[data-theme="dark"] .modal,
+[data-theme="dark"] .modal-body,
+[data-theme="dark"] .toast { background: #111b2e; color: var(--text); border-color: var(--line); }
+[data-theme="dark"] .brand-box,
+[data-theme="dark"] .filter-row,
+[data-theme="dark"] .tab-row,
+[data-theme="dark"] .modal-summary,
+[data-theme="dark"] .demo-note,
+[data-theme="dark"] .consumer-table th,
+[data-theme="dark"] th { background: #0d1627; color: var(--muted); border-color: var(--line); }
+[data-theme="dark"] td { border-color: #1b2740; }
+[data-theme="dark"] tbody tr:hover td,
+[data-theme="dark"] .consumer-table tbody tr:hover,
+[data-theme="dark"] .bell-item:hover { background: #15223a; }
+[data-theme="dark"] .bell-item.unread { background: rgba(59, 123, 242, 0.12); }
+[data-theme="dark"] .area-card.active,
+[data-theme="dark"] .area-card.all { background: linear-gradient(135deg, rgba(59, 123, 242, 0.14), #111b2e); }
+[data-theme="dark"] .area-bar,
+[data-theme="dark"] .chip .count,
+[data-theme="dark"] .chip.empty .count,
+[data-theme="dark"] .badge.none,
+[data-theme="dark"] .badge.neutral { background: #1a263d; color: var(--muted); }
+[data-theme="dark"] .chip { background: #111b2e; color: var(--text); border-color: var(--line); }
+[data-theme="dark"] .badge.warning { background: rgba(245, 163, 0, 0.16); color: #fbbf24; }
+[data-theme="dark"] .badge.danger,
+[data-theme="dark"] .login-message { background: rgba(240, 100, 100, 0.15); color: #f8a5a5; }
+
+/* Buttons */
+[data-theme="dark"] .ghost-btn,
+[data-theme="dark"] .light-btn,
+[data-theme="dark"] .btn-sm:not(.approve):not(.primary) { background: #111b2e; color: #c9dcff; border-color: #31425f; }
+[data-theme="dark"] .ghost-btn:hover,
+[data-theme="dark"] .light-btn:hover { background: rgba(59, 123, 242, 0.14); border-color: var(--primary); }
+[data-theme="dark"] .danger-btn { background: #111b2e; color: #f8a5a5; border-color: #5a2a2a; }
+[data-theme="dark"] .danger-btn:hover { background: rgba(240, 100, 100, 0.12); }
+[data-theme="dark"] .primary-btn:hover,
+[data-theme="dark"] #loginButton:hover { background: #2f6ae0; }
+
+/* Form fields everywhere in the console */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] #loginForm input,
+[data-theme="dark"] .filter-row input,
+[data-theme="dark"] .modal-body textarea { background: #0d1627; color: var(--text); border-color: #31425f; }
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: #6b7d98; }
+[data-theme="dark"] select:disabled,
+[data-theme="dark"] .filter-row select:disabled { background: #0a1220; color: var(--muted); }
+[data-theme="dark"] #loginForm label { color: var(--muted); }
+
 /* ---------------- Tablets and phones: the menu becomes a scrollable top row */
 @media (max-width: 900px) {
   #dashboardScreen.active { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; }
