@@ -25,7 +25,7 @@ SKIP_FILES = {"config.example.js"}
 
 # Kept True only while the new admin site is being set up, so staff are never
 # without a dashboard. Set to False once the admin site is live.
-INCLUDE_ADMIN_IN_CUSTOMER_SITE = True
+INCLUDE_ADMIN_IN_CUSTOMER_SITE = False
 
 
 def read_supabase_url() -> str:

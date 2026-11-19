@@ -60,15 +60,6 @@
           "value": "attachment; filename=\"OMECOnnect.apk\""
         }
       ]
-    },
-    {
-      "source": "/admin-dashboard/(.*)",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
     }
   ]
 }
