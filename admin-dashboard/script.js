@@ -257,6 +257,87 @@ function setBarangay(barangay) {
   renderCustomers();
 }
 
+// ---------------------------------------------------------------- Barangays inside their municipality
+const barangayView = { search: '', sort: 'order' }; // kept across live refreshes
+
+function barangayPanel(municipality, total, perBarangay) {
+  const barangays = coverage.get(municipality) || [];
+  const withConsumers = barangays.filter((b) => perBarangay.get(b)).length;
+  const max = Math.max(1, ...barangays.map((b) => perBarangay.get(b) || 0));
+
+  const tiles = el('div', { class: 'brgy-grid', role: 'list' });
+  const empty = el('p', { class: 'brgy-empty hidden' }, 'No barangay matches your search.');
+  const drawTiles = () => {
+    const list = [...barangays];
+    if (barangayView.sort === 'most') list.sort((a, b) => (perBarangay.get(b) || 0) - (perBarangay.get(a) || 0) || a.localeCompare(b));
+    if (barangayView.sort === 'az') list.sort((a, b) => a.localeCompare(b));
+    const term = barangayView.search.trim().toLowerCase();
+    const shown = list.filter((b) => !term || b.toLowerCase().includes(term));
+    const allTile = el('button', { type: 'button', role: 'listitem', class: `brgy-tile all${filters.barangay ? '' : ' active'}`, 'aria-pressed': String(!filters.barangay) },
+      el('span', { class: 'brgy-name' }, 'All barangays'),
+      el('span', { class: 'brgy-count' }, String(total)));
+    allTile.addEventListener('click', () => setBarangay(''));
+    tiles.replaceChildren(...(term ? [] : [allTile]), ...shown.map((barangay) => {
+      const count = perBarangay.get(barangay) || 0;
+      const active = filters.barangay === barangay;
+      const tile = el('button', { type: 'button', role: 'listitem', class: `brgy-tile${active ? ' active' : ''}${count ? '' : ' empty'}`, 'aria-pressed': String(active), title: `${barangay}: ${count} consumer${count === 1 ? '' : 's'}` },
+        el('span', { class: 'brgy-name' }, barangay),
+        el('span', { class: 'brgy-count' }, String(count)),
+        el('span', { class: 'brgy-bar' }, el('span', { style: `width:${Math.round((count / max) * 100)}%` })));
+      tile.addEventListener('click', () => setBarangay(active ? '' : barangay));
+      return tile;
+    }));
+    empty.classList.toggle('hidden', shown.length > 0);
+  };
+
+  const search = el('input', { type: 'search', class: 'brgy-search', placeholder: `Find a barangay in ${municipality}`, 'aria-label': `Find a barangay in ${municipality}` });
+  search.value = barangayView.search;
+  search.addEventListener('input', () => { barangayView.search = search.value; drawTiles(); });
+  const sort = el('select', { class: 'brgy-sort', 'aria-label': 'Sort barangays' },
+    new Option('OMECO order', 'order'), new Option('Most consumers', 'most'), new Option('A to Z', 'az'));
+  sort.value = barangayView.sort;
+  sort.addEventListener('change', () => { barangayView.sort = sort.value; drawTiles(); });
+  const close = el('button', { type: 'button', class: 'brgy-close', 'aria-label': `Close ${municipality}` }, '×');
+  close.addEventListener('click', () => setMunicipality(''));
+
+  const panel = el('section', { class: 'brgy-panel', id: 'barangayPanel', 'aria-label': `Barangays in ${municipality}` },
+    el('div', { class: 'brgy-head' },
+      el('div', {},
+        el('h4', {}, 'Barangays in ', el('strong', {}, municipality)),
+        el('p', {}, `${barangays.length} barangays · ${total} consumer${total === 1 ? '' : 's'} · ${withConsumers} barangay${withConsumers === 1 ? '' : 's'} with consumers`)),
+      el('div', { class: 'brgy-tools' }, search, sort, close)),
+    tiles, empty);
+  drawTiles();
+  return panel;
+}
+
+// Put the barangay panel right after the last card in the chosen card's row,
+// and point its arrow at that card. Re-run when the window size changes.
+function placeBarangayPanel() {
+  const grid = document.getElementById('municipalityChips');
+  const panel = document.getElementById('barangayPanel');
+  const card = grid && grid.querySelector('.area-card.municipality.active');
+  if (!panel || !card || !grid.offsetParent) return; // hidden: the observer re-runs it when shown
+  const cards = [...grid.querySelectorAll('.area-card')];
+  const columns = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length);
+  const index = cards.indexOf(card);
+  const rowEnd = Math.min(cards.length - 1, Math.floor(index / columns) * columns + columns - 1);
+  cards[rowEnd].after(panel);
+  const gridBox = grid.getBoundingClientRect();
+  const cardBox = card.getBoundingClientRect();
+  panel.style.setProperty('--notch-x', `${Math.round(cardBox.left - gridBox.left + cardBox.width / 2)}px`);
+}
+// Re-place when the grid is shown or changes width (window resize, sidebar, view switch).
+let barangayPlaceTimer = null;
+let lastGridWidth = 0;
+new ResizeObserver((entries) => {
+  const width = Math.round(entries[0].contentRect.width);
+  if (width === lastGridWidth) return;
+  lastGridWidth = width;
+  clearTimeout(barangayPlaceTimer);
+  barangayPlaceTimer = setTimeout(placeBarangayPanel, 60);
+}).observe(document.getElementById('municipalityChips'));
+
 function renderCustomers() {
   // Counts per municipality respect the status/search filters but not the location ones.
   const base = customers.filter((customer) => matchesFilters(customer, { municipality: true, barangay: true }));
@@ -265,6 +346,7 @@ function renderCustomers() {
   const noLocation = base.filter((customer) => !customer.municipality).length;
 
   // Service-area cards: one per municipality, with a bar relative to the busiest area.
+  const realMunicipality = filters.municipality && filters.municipality !== NO_LOCATION ? filters.municipality : '';
   const maxCount = Math.max(1, noLocation, ...perMunicipality.values());
   const areaCard = (label, count, meta, active, onClick, extraClass = '') => {
     const button = el('button', {
@@ -278,13 +360,30 @@ function renderCustomers() {
     button.addEventListener('click', onClick);
     return button;
   };
-  document.getElementById('municipalityChips').replaceChildren(
+  const municipalityCards = [...coverage.keys()].map((municipality) => {
+    const open = filters.municipality === municipality;
+    const card = areaCard(municipality, perMunicipality.get(municipality) || 0, `${coverage.get(municipality).length} barangays`,
+      open, () => setMunicipality(open ? '' : municipality), 'municipality');
+    card.setAttribute('aria-expanded', String(open));
+    card.dataset.municipality = municipality;
+    card.append(el('span', { class: 'area-chevron', 'aria-hidden': 'true' }));
+    return card;
+  });
+  const grid = document.getElementById('municipalityChips');
+  grid.replaceChildren(
     areaCard('All areas', base.length, `${coverage.size} municipalities`, !filters.municipality, () => setMunicipality(''), 'all'),
-    ...[...coverage.keys()].map((municipality) =>
-      areaCard(municipality, perMunicipality.get(municipality) || 0, `${coverage.get(municipality).length} barangays`,
-        filters.municipality === municipality, () => setMunicipality(municipality))),
-    areaCard('No location', noLocation, 'not set yet', filters.municipality === NO_LOCATION, () => setMunicipality(NO_LOCATION), 'unset')
+    ...municipalityCards,
+    areaCard('No location', noLocation, 'not set yet', filters.municipality === NO_LOCATION,
+      () => setMunicipality(filters.municipality === NO_LOCATION ? '' : NO_LOCATION), 'unset')
   );
+
+  // The chosen municipality opens its barangays right under its own row.
+  if (realMunicipality) {
+    const inMunicipality = base.filter((customer) => customer.municipality === realMunicipality);
+    const perBarangay = inMunicipality.reduce((map, customer) => map.set(customer.barangay, (map.get(customer.barangay) || 0) + 1), new Map());
+    grid.append(barangayPanel(realMunicipality, inMunicipality.length, perBarangay));
+    placeBarangayPanel();
+  }
 
   // Summary numbers (all consumers, ignoring filters).
   const statusCount = (key) => customers.filter((customer) => accountStatus(customer).key === key).length;
@@ -292,20 +391,6 @@ function renderCustomers() {
   document.getElementById('kpiVerified').textContent = statusCount('verified');
   document.getElementById('kpiPending').textContent = statusCount('pending');
   document.getElementById('kpiNoLocation').textContent = customers.filter((customer) => !customer.municipality).length;
-
-  const barangaySection = document.getElementById('barangaySection');
-  const realMunicipality = filters.municipality && filters.municipality !== NO_LOCATION ? filters.municipality : '';
-  barangaySection.classList.toggle('hidden', !realMunicipality);
-  if (realMunicipality) {
-    const inMunicipality = base.filter((customer) => customer.municipality === realMunicipality);
-    const perBarangay = inMunicipality.reduce((map, customer) => map.set(customer.barangay, (map.get(customer.barangay) || 0) + 1), new Map());
-    document.getElementById('barangaySectionTitle').textContent = realMunicipality;
-    document.getElementById('barangayChips').replaceChildren(
-      chip('All barangays', inMunicipality.length, !filters.barangay, () => setBarangay('')),
-      ...(coverage.get(realMunicipality) || []).map((barangay) =>
-        chip(barangay, perBarangay.get(barangay) || 0, filters.barangay === barangay, () => setBarangay(barangay)))
-    );
-  }
 
   fillSelect(document.getElementById('filterMunicipality'), 'All municipalities',
     [...[...coverage.keys()].map((m) => [m, m]), [NO_LOCATION, 'No location set']], filters.municipality);

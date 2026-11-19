@@ -628,3 +628,90 @@ body.bell-open { overflow: hidden; }
 }
 .bell-drawer .bell-item .bell-icon { display: grid; margin-top: 0; }
 .bell-drawer .bell-item .bell-text > span { margin-top: 3px; }
+
+/* ================= Service areas: barangays open inside their municipality ================= */
+.area-grid { position: relative; }
+.area-card.municipality { position: relative; padding-bottom: 18px; }
+.area-chevron {
+  position: absolute; left: 50%; bottom: 5px; width: 8px; height: 8px; margin-left: -4px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); opacity: 0.45; transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.area-card.municipality:hover .area-chevron { opacity: 0.9; }
+.area-card.municipality.active .area-chevron { transform: rotate(225deg); bottom: 2px; opacity: 1; border-color: var(--primary); }
+.area-card.active { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22, 82, 197, 0.16); }
+.area-card.active .area-name { color: var(--primary); }
+
+.brgy-panel {
+  --notch-x: 50%;
+  grid-column: 1 / -1; position: relative; margin: 4px 0 6px;
+  padding: 18px; border-radius: 16px;
+  border: 1px solid rgba(22, 82, 197, 0.35);
+  background: linear-gradient(180deg, #f3f7ff, #ffffff 70%);
+  box-shadow: 0 12px 28px rgba(11, 46, 107, 0.1);
+  animation: brgy-open 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.brgy-panel::before {
+  content: ""; position: absolute; top: -9px; left: var(--notch-x); width: 16px; height: 16px; margin-left: -8px;
+  background: #f3f7ff; border-left: 1px solid rgba(22, 82, 197, 0.35); border-top: 1px solid rgba(22, 82, 197, 0.35);
+  transform: rotate(45deg);
+}
+@keyframes brgy-open { from { opacity: 0; transform: translateY(-6px); } }
+
+.brgy-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.brgy-head h4 { margin: 0; font-size: 1rem; font-weight: 700; color: var(--text); }
+.brgy-head h4 strong { color: var(--primary); }
+.brgy-head p { margin: 4px 0 0; font-size: 0.8rem; color: var(--muted); }
+.brgy-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.brgy-search { width: 220px; max-width: 100%; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); font: inherit; font-size: 0.85rem; background: #fff; color: var(--text); }
+.brgy-sort { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); font: inherit; font-size: 0.85rem; background: #fff; color: var(--text); }
+.brgy-close { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: #fff; color: var(--text); font-size: 20px; line-height: 1; cursor: pointer; }
+.brgy-close:hover { border-color: var(--primary); color: var(--primary); }
+
+.brgy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.brgy-tile {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px;
+  padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff;
+  text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.brgy-tile:hover { border-color: #9ec1f7; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(11, 46, 107, 0.08); }
+.brgy-tile:focus-visible { outline: 3px solid rgba(245, 163, 0, 0.55); outline-offset: 2px; }
+.brgy-name { font-weight: 600; font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brgy-count { min-width: 26px; padding: 2px 8px; border-radius: 999px; text-align: center; font-size: 0.78rem; font-weight: 800; background: rgba(22, 82, 197, 0.12); color: #1652c5; font-variant-numeric: tabular-nums; }
+.brgy-bar { grid-column: 1 / -1; height: 4px; border-radius: 999px; background: #edf2f9; overflow: hidden; }
+.brgy-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4da3ff, #1652c5); }
+.brgy-tile.empty .brgy-count { background: #eef1f5; color: #94a0b3; }
+.brgy-tile.all { background: linear-gradient(135deg, #0b2e6b, #1652c5); border-color: transparent; color: #fff; }
+.brgy-tile.all .brgy-count { background: rgba(255, 255, 255, 0.2); color: #fff; }
+.brgy-tile.active:not(.all) { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22, 82, 197, 0.18); background: #eef4ff; }
+.brgy-tile.all:not(.active) { background: #fff; color: var(--text); border-color: var(--line); }
+.brgy-tile.all:not(.active) .brgy-count { background: rgba(22, 82, 197, 0.12); color: #1652c5; }
+.brgy-empty { margin: 10px 0 0; color: var(--muted); font-size: 0.85rem; }
+.brgy-empty.hidden { display: none; }
+
+/* Dark mode */
+[data-theme="dark"] .area-count { color: #93b4f0; }
+[data-theme="dark"] .area-card.empty .area-count { color: #5b6b85; }
+[data-theme="dark"] .area-card.active .area-name { color: #93b4f0; }
+[data-theme="dark"] .brgy-panel { background: linear-gradient(180deg, #13213a, #0f192b 70%); border-color: rgba(59, 123, 242, 0.4); box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4); }
+[data-theme="dark"] .brgy-panel::before { background: #13213a; border-color: rgba(59, 123, 242, 0.4); }
+[data-theme="dark"] .brgy-head h4 strong { color: #93b4f0; }
+[data-theme="dark"] .brgy-search, [data-theme="dark"] .brgy-sort, [data-theme="dark"] .brgy-close { background: #0d1627; border-color: #31425f; color: var(--text); }
+[data-theme="dark"] .brgy-tile { background: #111b2e; border-color: var(--line); }
+[data-theme="dark"] .brgy-tile:hover { border-color: #3b7bf2; }
+[data-theme="dark"] .brgy-count, [data-theme="dark"] .brgy-tile.all:not(.active) .brgy-count { background: rgba(59, 123, 242, 0.2); color: #b9cff7; }
+[data-theme="dark"] .brgy-tile.empty .brgy-count { background: #1a263d; color: #6b7d98; }
+[data-theme="dark"] .brgy-bar { background: #1a263d; }
+[data-theme="dark"] .brgy-tile.active:not(.all) { background: rgba(59, 123, 242, 0.16); }
+[data-theme="dark"] .brgy-tile.all.active { background: linear-gradient(135deg, #1652c5, #3b7bf2); }
+[data-theme="dark"] .brgy-tile.all:not(.active) { background: #111b2e; color: var(--text); }
+
+@media (max-width: 600px) {
+  .brgy-panel { padding: 14px; }
+  .brgy-tools { width: 100%; }
+  .brgy-search { flex: 1; width: auto; }
+  .brgy-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .brgy-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; }
+}
+@media (prefers-reduced-motion: reduce) { .brgy-panel { animation: none; } }

@@ -69,7 +69,7 @@ jobs:
                       if ref not in ids:
                           missing.append(f"{js}: #{ref}")
           # ids created at runtime are allowed
-          allowed = {"printArea", "toastHost", "modal", "modalTitle", "modalContent", "modalError", "modalConfirm", "modalCancel", "modalForm"}
+          allowed = {"printArea", "toastHost", "modal", "modalTitle", "modalContent", "modalError", "modalConfirm", "modalCancel", "modalForm", "barangayPanel"}
           missing = [m for m in missing if m.split("#")[-1] not in allowed]
           if missing:
               print("Scripts use ids that are not in the page:", *sorted(set(missing)), sep="\n  ")
