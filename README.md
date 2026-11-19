@@ -42,6 +42,16 @@ Vercel publishes **both** sites automatically after each push.
 - **Concern assignment and target times.** Each concern gets a target (power interruption 4 h, low voltage 24 h, payment 48 h, billing 72 h, new connection 5 days, other 72 h; change them in `complaint_sla_hours`). Tabs: Assigned to me, Unassigned, Overdue.
 - **Customer list** loads in batches (no 1000-row limit) and shows 25/50/100 rows per page.
 
+## Customer and staff features (phase 18-19)
+
+Customers: power status for their barangay with one-tap "Report no power", several linked OMECO accounts, bill details (charge breakdown, comparison with last month, print/PDF), meter reading with photo, concern photos + update timeline + star rating, due-date reminders (3 days before, due day, 1 day overdue at 8:00 AM), privacy consent, download my data, delete my account.
+
+Staff: roles (supervisor, billing, service, engineering) enforced by the database, outages grouped by barangay with "Mark power restored", meter-reading review, management report (on-time %, ratings, collection), app-error spike alerts, nightly backups (2:00 AM, kept 14 days, Security > Backups).
+
+Needs your own account to switch on (built and deployed, off until keys are added): online payment (PayMongo), AI assistant (Claude), reliable email (Brevo SMTP). Steps: [docs/SWITCH_ON_PAYMENTS_AI_EMAIL.md](docs/SWITCH_ON_PAYMENTS_AI_EMAIL.md).
+
+Every push runs automatic checks (GitHub Actions, `.github/workflows/checks.yml`).
+
 ## Live updates and app updates
 - **Data changes appear instantly** in the customer app and admin dashboard (Supabase Realtime,
   `live.js`; tables listed in `database/phase12_realtime.sql`). Each user only receives changes

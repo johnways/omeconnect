@@ -1,0 +1,92 @@
+# Runs on every push and pull request. Catches broken code before it goes live.
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: JavaScript syntax (customer app, admin console)
+        run: |
+          set -e
+          for f in customer-mobile-app/*.js admin-dashboard/*.js sw.js; do
+            echo "checking $f"
+            node --check "$f"
+          done
+
+      - name: Shared files are identical in both apps
+        run: |
+          cmp customer-mobile-app/live.js admin-dashboard/live.js
+          cmp customer-mobile-app/theme.js admin-dashboard/theme.js
+
+      - name: Every script and stylesheet referenced by the pages exists
+        run: |
+          python - <<'PY'
+          import re, pathlib, sys
+          bad = []
+          for page in ["customer-mobile-app/index.html", "admin-dashboard/index.html"]:
+              html = pathlib.Path(page).read_text(encoding="utf-8")
+              folder = pathlib.Path(page).parent
+              for ref in re.findall(r'(?:src|href)="([^"#:?]+\.(?:js|css))"', html):
+                  target = (pathlib.Path(".") / ref.lstrip("/")) if ref.startswith("/") else folder / ref
+                  if not target.exists():
+                      bad.append(f"{page}: {ref}")
+          if bad:
+              print("Missing files:", *bad, sep="\n  ")
+              sys.exit(1)
+          print("All referenced files exist.")
+          PY
+
+      - name: HTML element ids used by scripts exist
+        run: |
+          python - <<'PY'
+          import re, pathlib, sys
+          missing = []
+          for app in ["customer-mobile-app", "admin-dashboard"]:
+              html = pathlib.Path(app, "index.html").read_text(encoding="utf-8")
+              ids = set(re.findall(r'id="([^"]+)"', html))
+              for js in pathlib.Path(app).glob("*.js"):
+                  src = js.read_text(encoding="utf-8")
+                  # $('id') and document.getElementById('id') with a literal id
+                  for ref in re.findall(r"(?:getElementById|\$)\('([A-Za-z][\w-]*)'\)", src):
+                      if ref not in ids:
+                          missing.append(f"{js}: #{ref}")
+          # ids created at runtime are allowed
+          allowed = {"printArea", "toastHost", "modal", "modalTitle", "modalContent", "modalError", "modalConfirm", "modalCancel", "modalForm"}
+          missing = [m for m in missing if m.split("#")[-1] not in allowed]
+          if missing:
+              print("Scripts use ids that are not in the page:", *sorted(set(missing)), sep="\n  ")
+              sys.exit(1)
+          print("All element ids found.")
+          PY
+
+      - name: Build the two live sites
+        run: python tools/build_deploy.py
+
+      - name: Secrets and admin pages never reach the public site
+        run: |
+          set -e
+          test ! -e deploy/android-signing
+          test ! -e deploy-admin/android-signing
+          test ! -e deploy/admin-dashboard
+          if grep -rIl "service_role\|BEGIN PRIVATE KEY\|storePassword" deploy deploy-admin; then
+            echo "A secret was found in the build output above."; exit 1
+          fi
+          echo "OK: no keystore, no admin pages on the public site, no secrets in the build."

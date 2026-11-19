@@ -117,6 +117,10 @@
               Password
               <input id="registerPassword" type="password" autocomplete="new-password" minlength="10" required />
             </label>
+            <label class="consent-row">
+              <input id="registerConsent" type="checkbox" required />
+              <span>I have read and agree to the <a href="/privacy.html" target="_blank" rel="noopener">Privacy Notice</a> and <a href="/terms.html" target="_blank" rel="noopener">Terms</a>, and I allow OMECO to process my information for my electric service.</span>
+            </label>
             <p class="muted-copy">We'll email you a confirmation link. Creating an account does not link or reveal an electricity account. OMECO staff must verify your account number first.</p>
             <button class="primary-btn" type="submit">Create account</button>
           </form>
@@ -259,6 +263,10 @@
             <div class="hero-head">
               <p id="accountLabel" class="eyebrow light">Verified account</p>
               <h3 id="maskedAccountNumber">Account pending verification</h3>
+              <label class="account-switch hidden" id="accountSwitchWrap">
+                <span class="sr-only">Choose account</span>
+                <select id="accountSwitch" aria-label="Choose which OMECO account to view"></select>
+              </label>
             </div>
             <div class="hero-amount">
               <span>Amount due</span>
@@ -266,11 +274,27 @@
               <small id="heroDueDate">Due date: —</small>
             </div>
             <div class="hero-actions">
+              <button id="payNowButton" class="primary-btn pay-btn hidden" type="button">Pay now</button>
               <button class="primary-btn" type="button" data-screen="billsScreen">View bills</button>
               <button class="secondary-btn" type="button" data-screen="complaintsScreen">Report issue</button>
             </div>
           </div>
         </div>
+        <section id="powerCard" class="card power-card hidden" aria-labelledby="powerTitle" aria-live="polite">
+          <div class="power-head">
+            <span class="power-dot" aria-hidden="true"></span>
+            <div>
+              <h3 id="powerTitle">Power in your area</h3>
+              <p id="powerArea" class="power-area"></p>
+            </div>
+          </div>
+          <p id="powerText" class="power-text"></p>
+          <div id="powerAdvisories" class="power-advisories"></div>
+          <div class="power-actions">
+            <button id="reportOutageButton" class="secondary-btn power-report" type="button">Report no power</button>
+            <span id="powerNote" class="power-note"></span>
+          </div>
+        </section>
         <p id="demoDashboardBanner" class="demo-note hidden">DEMO DATA — Sample values only; not OMECO customer or billing data.</p>
 
         <div class="metrics-grid">
@@ -357,6 +381,23 @@
         </section>
 
         <div id="billList" class="bill-list"></div>
+
+        <form id="meterForm" class="card form-card meter-card hidden" novalidate>
+          <h3>Send your meter reading</h3>
+          <p class="muted-copy">Read the numbers on your electric meter (kWh) and add a clear photo. OMECO staff will check it.</p>
+          <label>
+            Meter reading (kWh)
+            <input id="meterValue" type="number" inputmode="decimal" min="0" step="0.1" required placeholder="e.g. 12345.6" />
+          </label>
+          <div class="photo-pick">
+            <label class="secondary-btn photo-btn" for="meterPhoto">Add meter photo</label>
+            <input id="meterPhoto" class="sr-only" type="file" accept="image/*" capture="environment" />
+            <div id="meterPhotoPreview" class="thumb-row"></div>
+          </div>
+          <button id="meterSubmit" class="primary-btn" type="submit">Send reading</button>
+          <p id="meterStatus" class="photo-status hidden" role="status"></p>
+          <div id="meterHistory" class="meter-history"></div>
+        </form>
       </main>
 
       <main class="app-screen" id="announcementsScreen">
@@ -400,6 +441,11 @@
             <textarea id="concernDetails" rows="5" maxlength="2000" required placeholder="Describe the issue, service location, and how it affects you."></textarea>
           </label>
           <p id="concernCounter" class="field-hint">At least 10 characters · 0/2000</p>
+          <div class="photo-pick">
+            <label class="secondary-btn photo-btn" for="concernPhotos">Add photos (up to 3)</label>
+            <input id="concernPhotos" class="sr-only" type="file" accept="image/*" multiple />
+            <div id="concernPhotoPreview" class="thumb-row"></div>
+          </div>
           <button id="concernSubmitButton" class="primary-btn" type="submit">Submit concern</button>
         </form>
 
@@ -456,7 +502,7 @@
           <p id="photoStatus" class="photo-status hidden" role="status"></p>
 
           <form id="verifyAccountForm" class="card form-card hidden">
-            <h3>Link your OMECO account</h3>
+            <h3 id="verifyAccountTitle">Link your OMECO account</h3>
             <p class="muted-copy">This submits a verification request. It does not expose bills or link an account until OMECO staff approves it.</p>
             <label>
               OMECO account number
@@ -513,6 +559,14 @@
           <button id="mfaDisableButton" class="secondary-btn hidden" type="button">Turn off two-step verification</button>
         </div>
 
+        <div class="card form-card" id="privacyCard">
+          <h3>Your data and privacy</h3>
+          <p class="muted-copy">Under the Data Privacy Act (RA 10173) you can get a copy of your data or delete your OMECOnnect account at any time.</p>
+          <button id="downloadDataButton" class="secondary-btn" type="button">Download my data</button>
+          <button id="deleteAccountButton" class="link-btn danger-link" type="button">Delete my account</button>
+          <p id="privacyStatus" class="photo-status hidden" role="status"></p>
+        </div>
+
         <div class="settings-list">
           <button class="setting-item" id="logoutButton">Logout</button>
           <button class="setting-item" data-screen="forgotScreen">Change password</button>
@@ -554,6 +608,7 @@
     <script src="supabase-client.js"></script>
     <script src="live.js"></script>
     <script src="script.js"></script>
+    <script src="features.js"></script>
     <script src="i18n.js"></script>
   </body>
 </html>

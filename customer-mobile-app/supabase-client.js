@@ -335,27 +335,28 @@
       });
     },
 
-    async getCustomerData({ userId, accessToken }) {
+    async getCustomerData({ userId, accessToken, accountId }) {
       const profilePromise = restRequest('users', {
         id: `eq.${userId}`,
-        select: 'id,full_name,email,mobile_number,municipality,barangay,avatar_path'
+        select: 'id,full_name,email,mobile_number,municipality,barangay,avatar_path,privacy_consent_at'
       }, accessToken);
 
       const accountPromise = restRequest('customer_accounts', {
         user_id: `eq.${userId}`,
         verification_status: 'eq.verified',
         select: 'id,account_number,service_area,meter_number,status,verification_status',
-        order: 'created_at.desc',
-        limit: '1'
+        order: 'created_at.asc',
+        limit: '20'
       }, accessToken);
 
       const [profiles, accounts] = await Promise.all([profilePromise, accountPromise]);
-      const account = accounts[0] || null;
+      // Several OMECO accounts can be linked (house, store, …). Use the chosen one.
+      const account = (accountId && accounts.find((a) => a.id === accountId)) || accounts[accounts.length - 1] || null;
 
       const billsPromise = account
         ? restRequest('electricity_bills', {
             customer_account_id: `eq.${account.id}`,
-            select: 'id,billing_month,due_date,total_amount,outstanding_balance,consumption_kwh,status,created_at',
+            select: 'id,billing_month,due_date,total_amount,outstanding_balance,consumption_kwh,status,created_at,charges',
             order: 'created_at.desc'
           }, accessToken)
         : Promise.resolve([]);
@@ -391,6 +392,7 @@
       return {
         profile: profiles[0] || null,
         account,
+        accounts: accounts || [],
         bills,
         announcements,
         notifications,
@@ -416,7 +418,7 @@
     },
 
     // Concerns (complaints). Tracking number and status are set by the database.
-    async submitConcern({ userId, type, description, municipality, barangay, accessToken }) {
+    async submitConcern({ userId, type, description, municipality, barangay, photoPaths, accessToken }) {
       const rows = await restRequest('complaints', { select: 'tracking_number,complaint_type,status,created_at' }, accessToken, {
         method: 'POST',
         headers: { Prefer: 'return=representation' },
@@ -425,7 +427,8 @@
           complaint_type: type,
           description,
           municipality: municipality || null,
-          barangay: barangay || null
+          barangay: barangay || null,
+          photo_paths: photoPaths && photoPaths.length ? photoPaths : null
         }
       });
       return rows && rows[0];
@@ -434,7 +437,7 @@
     async getConcerns({ userId, accessToken }) {
       return restRequest('complaints', {
         user_id: `eq.${userId}`,
-        select: 'tracking_number,complaint_type,description,status,created_at',
+        select: 'id,tracking_number,complaint_type,description,status,created_at,updated_at,due_by,photo_paths,rating,rated_at',
         order: 'created_at.desc',
         limit: '50'
       }, accessToken);

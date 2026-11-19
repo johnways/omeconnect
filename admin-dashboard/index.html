@@ -91,6 +91,7 @@
                 <div id="bellList" class="bell-list"></div>
               </div>
             </div>
+            <span id="roleChip" class="role-chip hidden" title="Your staff role"></span>
             <button class="ghost-btn" type="button" data-export-report>Export Report</button>
             <button id="logoutBtn" class="danger-btn" type="button">Sign out</button>
           </div>
@@ -105,11 +106,12 @@
             <div class="nav-title">Menu</div>
             <nav>
               <a class="nav-item active" href="#" data-view="overviewView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" /></svg><span>Overview</span></a>
-              <a class="nav-item" href="#" data-view="verificationView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v6c0 4.4 3 8.1 7 9 4-.9 7-4.6 7-9V6zM9 12l2 2 4-4" /></svg><span>Verification</span> <span class="nav-badge hidden" id="navVerificationBadge">0</span></a>
+              <a class="nav-item" href="#" data-view="verificationView" data-area="accounts"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v6c0 4.4 3 8.1 7 9 4-.9 7-4.6 7-9V6zM9 12l2 2 4-4" /></svg><span>Verification</span> <span class="nav-badge hidden" id="navVerificationBadge">0</span></a>
               <a class="nav-item" href="#" data-view="customersView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 7.5M18 14a6 6 0 0 1 4 7" /></svg><span>Customers</span></a>
-              <a class="nav-item" href="#" data-view="billsView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /></svg><span>Bills</span></a>
-              <a class="nav-item" href="#" data-view="announcementsView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /></svg><span>Announcements</span></a>
-              <a class="nav-item" href="#" data-view="complaintsView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4zM8 9h8M8 12h5" /></svg><span>Complaints</span> <span class="nav-badge hidden" id="navComplaintBadge">0</span></a>
+              <a class="nav-item" href="#" data-view="billsView" data-area="bills"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /></svg><span>Bills</span></a>
+              <a class="nav-item" href="#" data-view="meterView" data-area="meter"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 1 1 9-9M12 12l4-4M8 16h.01M16 16h.01" /></svg><span>Meter readings</span> <span class="nav-badge hidden" id="navMeterBadge">0</span></a>
+              <a class="nav-item" href="#" data-view="announcementsView" data-area="announcements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /></svg><span>Announcements</span></a>
+              <a class="nav-item" href="#" data-view="complaintsView" data-area="concerns"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4zM8 9h8M8 12h5" /></svg><span>Complaints</span> <span class="nav-badge hidden" id="navComplaintBadge">0</span></a>
               <a class="nav-item" href="#" data-view="reportsView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg><span>Reports</span></a>
               <a class="nav-item" href="#" data-view="securityView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11V8a6 6 0 1 1 12 0v3M5 11h14v10H5zM12 15v2" /></svg><span>Security</span></a>
             </nav>
@@ -332,6 +334,13 @@
                 <button class="light-btn icon-btn" type="button" data-refresh="complaints">Refresh</button>
               </div>
             </div>
+            <div id="outagePanel" class="panel outage-panel hidden">
+              <div class="panel-header">
+                <h3>Outages by area</h3>
+                <span class="muted small">Open "Power interruptions" reports grouped by barangay</span>
+              </div>
+              <div id="outageRows" class="outage-grid"></div>
+            </div>
             <div class="panel table-panel">
               <div class="tab-row" id="complaintTabs">
                 <button type="button" class="tab active" data-status="open">Open <span class="tab-count" id="complaintOpenCount">0</span></button>
@@ -426,6 +435,19 @@
                     <input id="billKwh" type="number" min="0" step="0.01" />
                   </label>
                 </div>
+                <details class="charges-box">
+                  <summary>Charge breakdown (optional, shown to the customer)</summary>
+                  <div class="form-grid" id="chargeFields">
+                    <label>Generation (₱)<input data-charge="generation" type="number" min="0" step="0.01" /></label>
+                    <label>Transmission (₱)<input data-charge="transmission" type="number" min="0" step="0.01" /></label>
+                    <label>System loss (₱)<input data-charge="system_loss" type="number" min="0" step="0.01" /></label>
+                    <label>Distribution (₱)<input data-charge="distribution" type="number" min="0" step="0.01" /></label>
+                    <label>Subsidies / lifeline (₱)<input data-charge="subsidies" type="number" step="0.01" /></label>
+                    <label>Universal charges (₱)<input data-charge="universal" type="number" min="0" step="0.01" /></label>
+                    <label>Taxes (₱)<input data-charge="taxes" type="number" min="0" step="0.01" /></label>
+                    <label>Other charges (₱)<input data-charge="other_charges" type="number" step="0.01" /></label>
+                  </div>
+                </details>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn icon-btn">Add bill</button>
                 </div>
@@ -473,6 +495,33 @@
             </div>
           </section>
 
+          <!-- ---------------------------------------------------------- Meter readings -->
+          <section class="content view" id="meterView">
+            <div class="page-head">
+              <div>
+                <h3 class="page-title">Meter readings</h3>
+                <p class="page-sub">Readings customers sent from the app, with a photo of the meter. Accept or return each one; the customer is notified.</p>
+              </div>
+            </div>
+            <div class="panel table-panel">
+              <div class="tab-row" id="meterTabs">
+                <button type="button" class="tab active" data-status="submitted">To check <span class="tab-count" id="meterPendingCount">0</span></button>
+                <button type="button" class="tab" data-status="accepted">Accepted</button>
+                <button type="button" class="tab" data-status="rejected">Not accepted</button>
+                <button type="button" class="tab" data-status="">All</button>
+              </div>
+              <div class="table-wrap">
+                <table class="consumer-table">
+                  <thead>
+                    <tr><th>Account</th><th>Reading</th><th>Date</th><th>Photo</th><th>Status</th><th class="actions-col">Action</th></tr>
+                  </thead>
+                  <tbody id="meterRows"></tbody>
+                </table>
+              </div>
+              <p id="meterEmpty" class="empty-note hidden">Nothing here.</p>
+            </div>
+          </section>
+
           <!-- ---------------------------------------------------------- Reports -->
           <section class="content view" id="reportsView">
             <div class="page-head">
@@ -481,7 +530,26 @@
                 <p class="page-sub">Live summary from the database.</p>
               </div>
               <div class="panel-actions">
+                <label class="period-pick">Period
+                  <select id="reportPeriod">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="90">Last 90 days</option>
+                    <option value="365">Last 12 months</option>
+                  </select>
+                </label>
                 <button class="primary-btn icon-btn" type="button" data-export-report>Export report (CSV)</button>
+              </div>
+            </div>
+            <div id="reportKpis" class="rkpi-grid"></div>
+            <div class="two-col report-extra">
+              <div class="panel">
+                <div class="panel-header"><h3>Concerns by area</h3></div>
+                <div id="reportAreaBars" class="bar-list"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header"><h3>New customers per month</h3></div>
+                <div id="reportSignupBars" class="bar-list"></div>
               </div>
             </div>
             <div class="two-col">
@@ -511,9 +579,13 @@
               </div>
             </div>
             <div class="panel">
-              <div class="panel-header"><h3>Administrator accounts</h3></div>
+              <div class="panel-header">
+                <h3>Staff and roles</h3>
+                <button type="button" class="light-btn supervisor-only hidden" id="addStaffButton">Add staff</button>
+              </div>
+              <p class="muted small role-help">Supervisor: everything · Billing: bills, account verification, meter readings · Service: concerns, outages, verification, announcements · Engineering: concerns, outages, announcements, meter readings.</p>
               <table>
-                <thead><tr><th>Name</th><th>Email</th><th>Employee ID</th><th>Department</th><th>Since</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department · ID</th><th>Since</th><th class="actions-col">Action</th></tr></thead>
                 <tbody id="adminRows"></tbody>
               </table>
               <p class="muted small">To add or remove an admin, ask your system administrator (it is done in Supabase → admin_accounts).</p>
@@ -538,6 +610,18 @@
               </div>
               <p id="errorEmpty" class="empty-note hidden">No app errors reported. 🎉</p>
             </div>
+            <div class="panel supervisor-only hidden" id="backupPanel">
+              <div class="panel-header">
+                <h3>Backups</h3>
+                <button type="button" class="light-btn" id="backupNowButton">Back up now</button>
+              </div>
+              <p class="muted small role-help">A compressed copy of all records is saved every night at 2:00 AM and kept for 14 days. Only supervisors can download them.</p>
+              <table>
+                <thead><tr><th>Date</th><th>Size</th><th class="actions-col">Action</th></tr></thead>
+                <tbody id="backupRows"></tbody>
+              </table>
+              <p id="backupEmpty" class="empty-note hidden">No backups yet.</p>
+            </div>
           </section>
         </main>
       </section>
@@ -561,5 +645,6 @@
 
     <script src="script.js"></script>
     <script src="admin-ops.js"></script>
+    <script src="admin-features.js"></script>
   </body>
 </html>

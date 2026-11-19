@@ -153,7 +153,7 @@
   async function loadComplaints() {
     state.complaints = await supabaseClient.select(
       'complaints?select=id,tracking_number,complaint_type,description,status,created_at,updated_at,municipality,barangay,user_id,' +
-      'assigned_to,assigned_at,due_by,' +
+      'assigned_to,assigned_at,due_by,photo_paths,rating,rating_comment,' +
       'users:users!complaints_user_id_fkey(full_name,email,mobile_number,municipality,barangay)&order=created_at.desc&limit=300', token());
   }
 
@@ -246,6 +246,8 @@
         }
         if (n.type === 'admin_verification') setView('verificationView');
         else if (n.type === 'admin_complaint') setView('complaintsView');
+        else if (n.type === 'admin_meter') setView('meterView');
+        else if (n.type === 'admin_alert') setView('securityView');
       });
       return item;
     }));
@@ -447,6 +449,12 @@
       update.addEventListener('click', () => void updateComplaint(c));
       const assign = el('button', { type: 'button', class: 'btn-sm' }, c.assigned_to ? 'Reassign' : 'Assign');
       assign.addEventListener('click', () => void assignComplaint(c));
+      const extras = [];
+      if (c.photo_paths && c.photo_paths.length && window.adminFeatures) {
+        const photos = el('button', { type: 'button', class: 'btn-sm' }, `Photos (${c.photo_paths.length})`);
+        photos.addEventListener('click', () => window.adminFeatures.showPhotos(c.photo_paths, `Photos · ${c.tracking_number}`));
+        extras.push(photos);
+      }
       return el('tr', {},
         el('td', {}, el('strong', {}, c.complaint_type), el('span', { class: 'cell-sub mono' }, c.tracking_number),
           el('span', { class: 'note-line' }, c.description.length > 90 ? `${c.description.slice(0, 90)}…` : c.description)),
@@ -454,14 +462,16 @@
         el('td', {}, municipality ? `${barangay || ''}${barangay ? ', ' : ''}${municipality}` : el('span', { class: 'not-set' }, 'Not set')),
         el('td', {}, fmtDate(c.created_at), el('span', { class: 'cell-sub' }, slaBadge(c))),
         el('td', {}, c.assigned_to ? el('span', { class: 'assignee' }, staffName(c.assigned_to)) : el('span', { class: 'assignee none' }, 'Unassigned')),
-        el('td', {}, badge(label, kind)),
-        el('td', {}, el('div', { class: 'row-actions' }, update, assign)));
+        el('td', {}, badge(label, kind),
+          c.rating ? el('span', { class: 'cell-sub stars-small', title: c.rating_comment || '' }, `${'★'.repeat(c.rating)}${'☆'.repeat(5 - c.rating)}`) : null),
+        el('td', {}, el('div', { class: 'row-actions' }, update, assign, ...extras)));
     }), {
       open: 'No open concerns. Nice work!',
       mine: 'Nothing assigned to you right now.',
       unassigned: 'Every open concern has someone on it.',
       overdue: 'No overdue concerns. 🎉'
     }[state.complaintTab] || 'Nothing here.');
+    if (window.adminFeatures) window.adminFeatures.renderOutages(state.complaints);
     const overdue = state.complaints.filter(isOverdue).length;
     $('complaintOverdueCount').textContent = String(overdue);
     $('complaintOverdueCount').classList.toggle('hidden', !overdue);
@@ -687,6 +697,7 @@
         total_amount: amount,
         outstanding_balance: amount,
         consumption_kwh: $('billKwh').value ? Number($('billKwh').value) : null,
+        charges: window.adminFeatures ? window.adminFeatures.readCharges() : null,
         status: 'unpaid'
       }, token());
       $('billForm').reset();
@@ -722,7 +733,10 @@
     month: 'billing_month', billing_month: 'billing_month', period: 'billing_month',
     due: 'due_date', due_date: 'due_date',
     amount: 'total_amount', total: 'total_amount', total_amount: 'total_amount', amount_due: 'total_amount',
-    kwh: 'consumption_kwh', consumption: 'consumption_kwh', consumption_kwh: 'consumption_kwh'
+    kwh: 'consumption_kwh', consumption: 'consumption_kwh', consumption_kwh: 'consumption_kwh',
+    // optional charge breakdown columns
+    generation: 'generation', transmission: 'transmission', system_loss: 'system_loss', distribution: 'distribution',
+    subsidies: 'subsidies', universal: 'universal', universal_charges: 'universal', taxes: 'taxes', vat: 'taxes', other_charges: 'other_charges', others: 'other_charges'
   };
   let importRows = null;
 
@@ -928,7 +942,7 @@
     let errors;
     try {
       [admins, audit, errors] = await Promise.all([
-        supabaseClient.select('admin_accounts?select=employee_id,department,created_at,users(full_name,email)&order=created_at.asc', token()),
+        supabaseClient.select('admin_accounts?select=user_id,role,employee_id,department,created_at,users(full_name,email)&order=created_at.asc', token()),
         supabaseClient.select('audit_logs?select=created_at,action,entity_type,details,users(full_name,email)&order=created_at.desc&limit=50', token()),
         supabaseClient.select('system_logs?select=created_at,message,metadata&level=eq.client_error&order=created_at.desc&limit=50', token())
       ]);
@@ -939,9 +953,11 @@
     $('adminRows').replaceChildren(...admins.map((a) => el('tr', {},
       el('td', {}, (a.users && a.users.full_name) || '—'),
       el('td', {}, (a.users && a.users.email) || '—'),
-      el('td', { class: 'mono' }, a.employee_id || '—'),
-      el('td', {}, a.department || '—'),
-      el('td', {}, fmtDate(a.created_at, false)))));
+      el('td', {}, window.adminFeatures ? window.adminFeatures.roleCell(a) : (a.role || '—')),
+      el('td', {}, [a.department, a.employee_id].filter(Boolean).join(' · ') || '—'),
+      el('td', {}, fmtDate(a.created_at, false)),
+      el('td', {}, window.adminFeatures ? window.adminFeatures.staffActions(a) : ''))));
+    if (window.adminFeatures) void window.adminFeatures.showBackups();
     const describe = (entry) => {
       const d = entry.details || {};
       return [d.account_number, d.tracking_number, d.title, d.billing_month, d.reason, d.from && d.to ? `${d.from} → ${d.to}` : d.to ? `→ ${d.to}` : null, d.area]
@@ -981,6 +997,10 @@
     securityView: showSecurity
   };
   window.adminViews = views;
+  window.adminCtx = {
+    state, $, el, toast, openModal, field, badge, fmtDate, peso, setRows, token, myId, live, needLive,
+    views, showComplaints, showSecurity, showBills, refreshActiveView
+  };
 
   document.addEventListener('click', (event) => {
     const go = event.target.closest('[data-go]');
@@ -1048,7 +1068,7 @@
   // this browser tab only, so an update reload does not sign the admin out.
   const SESSION_KEY = 'omeconnect.admin.session';
   const LIVE_TABLES = [
-    'account_verification_requests', 'complaints', 'complaint_status_history', 'notifications',
+    'account_verification_requests', 'complaints', 'meter_readings', 'complaint_status_history', 'notifications',
     'announcements', 'electricity_bills', 'payments', 'customer_accounts', 'users'
   ];
   let liveUpdates = null;
@@ -1132,6 +1152,7 @@
       return;
     }
     startLive();
+    if (window.adminFeatures) await window.adminFeatures.onSignIn();
     await poll({ quiet: true });
     const pending = state.requests.filter((r) => r.status === 'pending').length;
     if (pending) toast(`🔔 ${pending} verification request${pending === 1 ? '' : 's'} waiting for review.`);

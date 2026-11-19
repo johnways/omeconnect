@@ -482,3 +482,58 @@ button:active:not(:disabled), .chip:active, .area-card:active { transform: scale
 #mfaButton:disabled { opacity: 0.6; cursor: wait; }
 [data-theme="dark"] #mfaForm > label { color: var(--muted); }
 [data-theme="dark"] #mfaForm input { background: #0d1627; border-color: #31425f; color: var(--text); }
+
+/* ================= Phase 18: admin features ================= */
+.role-chip { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.02em; background: rgba(245, 163, 0, 0.16); color: #a16207; }
+.role-chip.hidden, .supervisor-only.hidden, .nav-item.hidden { display: none !important; }
+.role-help { padding: 0 20px 10px; margin: 0; }
+.role-tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: rgba(22, 82, 197, 0.1); color: #1652c5; }
+.role-tag.role-supervisor { background: rgba(245, 163, 0, 0.16); color: #a16207; }
+.role-select { padding: 6px 8px; border-radius: 8px; font: inherit; font-size: 0.85rem; }
+.stars-small { color: #f5a300; letter-spacing: 1px; font-size: 0.9rem; }
+
+/* outages */
+.outage-panel { margin-bottom: 18px; border-left: 5px solid #dc2626; }
+.outage-panel.hidden { display: none; }
+.outage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; padding: 0 20px 20px; }
+.outage-card { display: grid; gap: 4px; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(220, 38, 38, 0.04); }
+.outage-card.big { background: rgba(220, 38, 38, 0.1); border-color: rgba(220, 38, 38, 0.35); }
+.outage-count { font-weight: 800; color: #b91c1c; font-size: 0.9rem; margin: 4px 0 6px; }
+.outage-card .btn-sm { justify-self: start; }
+
+/* bill breakdown */
+.charges-box { margin: 4px 0 10px; border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; }
+.charges-box summary { cursor: pointer; font-weight: 700; font-size: 0.88rem; }
+.charges-box .form-grid { margin-top: 10px; }
+
+/* photos in a dialog */
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.photo-link { display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+.photo-link img { width: 100%; height: 160px; object-fit: cover; display: block; }
+.photo-link.zoomed { grid-column: 1 / -1; }
+.photo-link.zoomed img { height: auto; max-height: 70vh; object-fit: contain; background: #000; }
+
+/* reports */
+.period-pick { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.85rem; color: var(--muted); }
+.period-pick select { padding: 8px 10px; border-radius: 10px; font: inherit; }
+.rkpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.rkpi { display: grid; gap: 4px; padding: 16px; border-radius: 14px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); border-top: 4px solid #1652c5; }
+.rkpi span { font-size: 0.78rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.rkpi strong { font-size: clamp(1.15rem, 2.2vw, 1.55rem); font-weight: 800; color: var(--text); line-height: 1.15; overflow-wrap: anywhere; }
+.rkpi small { color: var(--muted); font-size: 0.8rem; }
+.rkpi.good { border-top-color: #15803d; }
+.rkpi.warn { border-top-color: #f5a300; }
+.rkpi.bad { border-top-color: #dc2626; }
+.report-extra { margin-bottom: 18px; }
+.bar-list { display: grid; gap: 10px; padding: 0 20px 20px; }
+.bar-row { display: grid; grid-template-columns: 130px 1fr 40px; align-items: center; gap: 10px; font-size: 0.86rem; }
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.bar-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #1652c5, #3b82f6); }
+.bar-value { text-align: right; font-weight: 700; }
+
+[data-theme="dark"] .rkpi { background: var(--surface, #111c30); }
+[data-theme="dark"] .role-chip, [data-theme="dark"] .role-tag.role-supervisor { color: #fbbf24; }
+[data-theme="dark"] .role-tag { color: #93b4f0; }
+[data-theme="dark"] .outage-count { color: #f87171; }
+@media (max-width: 600px) { .bar-row { grid-template-columns: 90px 1fr 32px; } }

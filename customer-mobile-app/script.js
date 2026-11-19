@@ -102,6 +102,15 @@ function setScreen(screenId) {
   window.scrollTo({ top: 0 });
 }
 
+// Which linked OMECO account the customer is looking at (several can be linked).
+const ACCOUNT_KEY = 'omeconnect.account';
+function chosenAccountId() {
+  try { return localStorage.getItem(ACCOUNT_KEY) || ''; } catch { return ''; }
+}
+function chooseAccount(accountId) {
+  try { localStorage.setItem(ACCOUNT_KEY, accountId); } catch { /* private mode */ }
+}
+
 function renderDashboard() {
   renderAccountSummary();
   renderTwoStepCard();
@@ -110,6 +119,7 @@ function renderDashboard() {
   renderAnnouncements();
   renderNotifications();
   renderChat(currentCustomer.chatHistory);
+  if (window.OMECO_FEATURES) window.OMECO_FEATURES.onDashboard();
 }
 
 // ---------------------------------------------------------------- Profile photo
@@ -337,7 +347,9 @@ function renderAccountSummary() {
     .reduce((sum, bill) => sum + (Number(bill.outstanding_balance) || 0), 0);
   document.getElementById('billOutstandingTotal').textContent =
     currentCustomer.bills.length ? formatCurrency(unpaidTotal) : formatCurrency(null);
-  document.getElementById('verifyAccountForm').classList.toggle('hidden', Boolean(account));
+  // Customers can link more than one OMECO account (house, store, …).
+  document.getElementById('verifyAccountForm').classList.remove('hidden');
+  document.getElementById('verifyAccountTitle').textContent = account ? 'Link another OMECO account' : 'Link your OMECO account';
 
   const profileName = document.getElementById('profileName');
   const profileEmail = document.getElementById('profileEmail');
@@ -411,7 +423,7 @@ function renderBills() {
   }
 
   billList.innerHTML = currentCustomer.bills.map((bill) => `
-    <div class="bill-item">
+    <div class="bill-item" role="button" tabindex="0" data-bill-id="${escapeHtml(bill.id || '')}" aria-label="Open bill details">
       <div>
         <strong>${escapeHtml(bill.billing_month || 'Electricity bill')}</strong>
         <small>Consumption: ${escapeHtml(bill.consumption_kwh ?? '—')} kWh</small>
@@ -515,13 +527,15 @@ async function refreshCustomerData() {
   try {
     const data = await supabaseClient.getCustomerData({
       userId: currentSession.user.id,
-      accessToken: currentSession.access_token
+      accessToken: currentSession.access_token,
+      accountId: chosenAccountId()
     });
     const knownIds = new Set(currentCustomer.notifications.map((n) => n.id));
     const fresh = (data.notifications || []).filter((n) => !knownIds.has(n.id) && !n.is_read);
     Object.assign(currentCustomer, {
       avatarPath: data.profile ? data.profile.avatar_path || '' : currentCustomer.avatarPath,
       account: data.account,
+      accounts: data.accounts || [],
       bills: data.bills || [],
       announcements: data.announcements || [],
       notifications: data.notifications || []
@@ -530,6 +544,7 @@ async function refreshCustomerData() {
     renderBills();
     renderAnnouncements();
     renderNotifications();
+    if (window.OMECO_FEATURES) window.OMECO_FEATURES.onRefresh();
     if (fresh.length) setMessage(`🔔 ${fresh[0].title}: ${fresh[0].message}`, 'success');
   } catch (error) {
     // Session expired or offline: keep what is on screen.
@@ -998,11 +1013,27 @@ async function handleAiSubmit() {
   const prompt = aiInput.value.trim();
   if (!prompt || !currentCustomer) return;
 
-  const response = buildAiResponse(prompt);
+  aiInput.value = '';
   currentCustomer.chatHistory.push({ role: 'user', text: prompt });
+
+  // Real AI assistant (Claude) when OMECO has switched it on; it saves the chat itself.
+  if (window.OMECO_FEATURES && await window.OMECO_FEATURES.aiEnabled()) {
+    const pending = { role: 'bot', text: 'Thinking…' };
+    currentCustomer.chatHistory.push(pending);
+    renderChat(currentCustomer.chatHistory);
+    try {
+      pending.text = await window.OMECO_FEATURES.askAi(prompt);
+      renderChat(currentCustomer.chatHistory);
+      return;
+    } catch (error) {
+      currentCustomer.chatHistory.pop();
+      console.warn('AI assistant unavailable, using simple replies:', error.message);
+    }
+  }
+
+  const response = buildAiResponse(prompt);
   currentCustomer.chatHistory.push({ role: 'bot', text: response });
   renderChat(currentCustomer.chatHistory);
-  aiInput.value = '';
 
   if (currentSession && supabaseClient) {
     try {
@@ -1105,7 +1136,8 @@ async function loadCustomerFromSession(session, fallbackEmail) {
 
   const data = await supabaseClient.getCustomerData({
     userId: session.user.id,
-    accessToken: session.access_token
+    accessToken: session.access_token,
+    accountId: chosenAccountId()
   });
 
   if (!data.profile) {
@@ -1118,6 +1150,9 @@ async function loadCustomerFromSession(session, fallbackEmail) {
     fullName: data.profile.full_name || 'Customer',
     avatarPath: data.profile.avatar_path || '',
     googlePhoto: googlePhotoFrom(session.user),
+    accounts: data.accounts || [],
+    privacyConsentAt: data.profile.privacy_consent_at || null,
+    signupConsent: Boolean(session.user && session.user.user_metadata && session.user.user_metadata.privacy_consent),
     municipality: data.profile.municipality || '',
     barangay: data.profile.barangay || '',
     totpFactors,
@@ -1151,6 +1186,12 @@ async function handleRegistration(event) {
     setMessage('Choose your municipality and barangay.', 'error');
     return;
   }
+  const consentBox = document.getElementById('registerConsent');
+  if (consentBox && !consentBox.checked) {
+    setMessage('Please read and agree to the Privacy Notice to create an account.', 'error');
+    consentBox.focus();
+    return;
+  }
 
   if (appConfig.demoMode) {
     setMessage('Registration is disabled in demo mode.', 'error');
@@ -1171,7 +1212,8 @@ async function handleRegistration(event) {
         municipality,
         barangay,
         // Sent to OMECO staff for review on the customer's first sign-in.
-        account_number: accountNumber
+        account_number: accountNumber,
+        privacy_consent: true
       }
     });
 
@@ -1915,6 +1957,7 @@ function renderConcerns() {
     text.textContent = concern.description || '';
 
     item.append(top, text);
+    if (window.OMECO_FEATURES) window.OMECO_FEATURES.decorateConcern(item, concern);
     return item;
   }));
 }
@@ -1964,15 +2007,18 @@ concernForm.addEventListener('submit', async (event) => {
   button.disabled = true;
   button.textContent = 'Submitting…';
   try {
+    const photoPaths = window.OMECO_FEATURES ? await window.OMECO_FEATURES.uploadConcernPhotos() : [];
     const saved = await supabaseClient.submitConcern({
       userId: currentSession.user.id,
       type: document.getElementById('concernType').value,
       description,
+      photoPaths,
       municipality: currentCustomer && currentCustomer.municipality,
       barangay: currentCustomer && currentCustomer.barangay,
       accessToken: currentSession.access_token
     });
     concernForm.reset();
+    if (window.OMECO_FEATURES) window.OMECO_FEATURES.clearConcernPhotos();
     updateConcernCounter();
     highlightTracking = saved ? saved.tracking_number : '';
     await loadConcerns();
