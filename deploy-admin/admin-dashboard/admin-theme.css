@@ -195,6 +195,69 @@ tbody tr:hover td { background: #f8fbff; }
 /* Chips and service-area cards */
 .chip.active, .area-card.active { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(22, 82, 197, 0.14); }
 
+/* ==========================================================================
+   Button motion: lift on hover, press-down on click, ripple, smooth focus.
+   The ripple starts where the mouse touched (--rx/--ry set by live.js).
+   ========================================================================== */
+button, .nav-item, .chip, .area-card, .tab {
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+.primary-btn, .light-btn, .ghost-btn, .danger-btn, #loginButton, .chip, .area-card, .sidebar .nav-item {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.primary-btn::after, .light-btn::after, .ghost-btn::after, .danger-btn::after, #loginButton::after,
+.chip::after, .area-card::after, .sidebar .nav-item::after {
+  content: "";
+  position: absolute;
+  left: var(--rx, 50%);
+  top: var(--ry, 50%);
+  z-index: -1;
+  width: 240%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.55s ease-out, opacity 0.6s ease-out;
+  pointer-events: none;
+}
+.primary-btn::after, #loginButton::after, .sidebar .nav-item::after { background: #ffffff; }
+/* The bell's red count bubble sits outside the button: don't clip it. */
+.ghost-btn.bell-btn { overflow: visible; }
+.ghost-btn.bell-btn::after { display: none; }
+.primary-btn:active::after, .light-btn:active::after, .ghost-btn:active::after, .danger-btn:active::after,
+#loginButton:active::after, .chip:active::after, .area-card:active::after, .sidebar .nav-item:active::after {
+  opacity: 0.16;
+  transform: translate(-50%, -50%) scale(1);
+  transition: transform 0s, opacity 0s;
+}
+@media (hover: hover) {
+  .primary-btn:hover:not(:disabled), #loginButton:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(22, 82, 197, 0.28); }
+  .light-btn:hover:not(:disabled), .ghost-btn:hover:not(:disabled), .danger-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15, 27, 45, 0.08); }
+  .area-card:hover, .kpi:hover, .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 27, 45, 0.08); }
+  .sidebar .nav-item:hover svg { transform: translateX(2px); }
+}
+.kpi, .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.sidebar .nav-item svg { transition: transform 0.2s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.sidebar .nav-item.active svg { animation: side-pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes side-pop { 0% { transform: scale(0.8); } 100% { transform: none; } }
+button:active:not(:disabled), .chip:active, .area-card:active { transform: scale(0.97); }
+.sidebar .nav-item:active { transform: scale(0.98); }
+.nav-badge, .bell-count { animation: admin-badge-pop 0.3s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes admin-badge-pop { from { transform: scale(0.4); } to { transform: scale(1); } }
+.content.view.active { animation: view-in 0.2s ease-out; }
+@keyframes view-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
 /* ---------------- Tablets and phones: the menu becomes a scrollable top row */
 @media (max-width: 900px) {
   #dashboardScreen.active { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; }

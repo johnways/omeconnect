@@ -285,5 +285,18 @@
     void check();
   }
 
+  // ------------------------------------------------------------ 4. Touch ripple
+  // Tells the button styles where the finger or mouse touched, so the ripple
+  // animation starts from that point (purely visual).
+  document.addEventListener('pointerdown', (event) => {
+    const target = event.target instanceof Element
+      ? event.target.closest('button, a.primary-btn, a.secondary-btn, a.setting-item')
+      : null;
+    if (!target) return;
+    const box = target.getBoundingClientRect();
+    target.style.setProperty('--rx', `${event.clientX - box.left}px`);
+    target.style.setProperty('--ry', `${event.clientY - box.top}px`);
+  }, { passive: true });
+
   window.OMECO_LIVE = { createLiveUpdates, requireOnline, watchForNewVersion };
 })();

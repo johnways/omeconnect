@@ -207,8 +207,18 @@ function renderAnnouncements() {
   `).join('');
 }
 
+// Unread count on the Alerts tab of the bottom menu.
+function renderAlertsBadge() {
+  const badge = document.getElementById('navAlertsBadge');
+  if (!badge) return;
+  const unread = currentCustomer ? currentCustomer.notifications.filter((n) => !n.is_read).length : 0;
+  badge.textContent = unread > 9 ? '9+' : String(unread);
+  badge.classList.toggle('hidden', !unread);
+}
+
 function renderNotifications() {
   if (!notificationList) return;
+  renderAlertsBadge();
 
   if (!currentCustomer.notifications.length) {
     notificationList.innerHTML = '<p class="empty-state">You have no notifications.</p>';
@@ -397,12 +407,37 @@ const onIphone = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const inAndroidWebView = /; wv\)/.test(navigator.userAgent);
 const openedFromHomeScreen = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 let pushJustEnabled = false;
+// The pop-up settings panel opens only from the small bell button at the top
+// of the dashboard (or from Profile), so the dashboard stays clean.
+const pushToggleButton = document.getElementById('pushToggleButton');
+const pushToggleLabel = document.getElementById('pushToggleLabel');
+const pushToggleDot = document.getElementById('pushToggleDot');
+let pushPanelOpen = false;
+
+function setPushPanel(open) {
+  pushPanelOpen = Boolean(open) && Boolean(currentSession);
+  pushCard.classList.toggle('hidden', !pushPanelOpen);
+  pushToggleButton.setAttribute('aria-expanded', String(pushPanelOpen));
+  pushToggleButton.classList.toggle('open', pushPanelOpen);
+}
+
+// state: 'on' | 'off' | 'blocked' | 'unavailable'
+function setPushToggleState(state) {
+  pushToggleButton.classList.toggle('on', state === 'on');
+  pushToggleDot.classList.toggle('hidden', state === 'on' || state === 'unavailable');
+  pushToggleLabel.textContent = state === 'on' ? 'Pop-ups on' : 'Pop-ups';
+  pushToggleButton.title = {
+    on: 'Pop-up alerts are on for this phone',
+    off: 'Turn on pop-up alerts for this phone',
+    blocked: 'Pop-up alerts are blocked on this phone',
+    unavailable: 'Pop-up alerts are not available in this window'
+  }[state];
+}
 
 function showPushStatus(text, kind = '') {
   pushStatus.textContent = text;
   pushStatus.className = `push-status ${kind}`;
   pushStatus.classList.toggle('hidden', !text);
-  if (text) pushCard.classList.remove('hidden');
 }
 
 function base64UrlToBytes(value) {
@@ -418,9 +453,11 @@ async function getThisPhonesSubscription() {
 
 async function renderPushControls() {
   if (!currentSession || appConfig.demoMode) {
-    pushCard.classList.add('hidden');
+    setPushPanel(false);
+    pushToggleButton.classList.add('hidden');
     return;
   }
+  pushToggleButton.classList.remove('hidden');
   pushOpenBrowser.classList.add('hidden');
   if (!pushSupported) {
     pushEnableButton.classList.add('hidden');
@@ -428,7 +465,7 @@ async function renderPushControls() {
     pushTestSettingButton.classList.add('hidden');
     pushSettingButton.disabled = true;
     pushSettingButton.textContent = 'Phone notifications: not available in this window';
-    pushCard.classList.remove('hidden');
+    setPushToggleState('unavailable');
     if (onIphone && !openedFromHomeScreen) {
       pushText.textContent = 'On iPhone: open this page in Safari, tap Share → Add to Home Screen, then open OMECOnnect from your home screen to turn on alerts.';
     } else {
@@ -446,8 +483,8 @@ async function renderPushControls() {
   pushSettingButton.textContent = isOn ? 'Phone notifications: On (tap to turn off)' : 'Phone notifications: Off (tap to turn on)';
   pushTestSettingButton.classList.toggle('hidden', !isOn);
   pushTestButton.classList.toggle('hidden', !isOn);
+  setPushToggleState(isOn ? 'on' : permission === 'denied' ? 'blocked' : 'off');
   if (permission === 'denied') {
-    pushCard.classList.remove('hidden');
     pushText.textContent = 'Notifications are blocked for OMECOnnect on this phone. To allow them: tap the ⓘ or lock icon next to the web address → Permissions (or Notifications) → Allow. Or: phone Settings → Apps → your browser → Notifications → Sites. Then tap Turn on again.';
     pushEnableButton.classList.remove('hidden');
     return;
@@ -456,8 +493,6 @@ async function renderPushControls() {
     ? 'Pop-up alerts are ON for this phone. You will be notified about OMECO announcements, bills and updates.'
     : PUSH_DEFAULT_TEXT;
   pushEnableButton.classList.toggle('hidden', isOn);
-  // Keep the card on screen right after turning on, so the result can be read.
-  pushCard.classList.toggle('hidden', isOn && !pushJustEnabled);
 }
 
 async function sendTestPopUp() {
@@ -554,11 +589,20 @@ async function syncPhoneNotifications() {
   void renderPushControls();
 }
 
+pushToggleButton.addEventListener('click', () => {
+  setPushPanel(!pushPanelOpen);
+  if (!pushPanelOpen) showPushStatus('');
+});
+document.getElementById('pushCloseButton').addEventListener('click', () => {
+  setPushPanel(false);
+  showPushStatus('');
+  pushToggleButton.focus();
+});
 pushEnableButton.addEventListener('click', () => void turnOnPhoneNotifications());
 pushTestButton.addEventListener('click', () => void sendTestPopUp());
 pushTestSettingButton.addEventListener('click', () => {
   setScreen('homeScreen');
-  pushCard.scrollIntoView({ block: 'center' });
+  setPushPanel(true);
   void sendTestPopUp();
 });
 pushSettingButton.addEventListener('click', async () => {
@@ -572,10 +616,9 @@ pushSettingButton.addEventListener('click', async () => {
     setMessage('Phone notifications are off.', 'success');
     void renderPushControls();
   } else {
-    // Show the card so the steps and any problem are visible.
+    // Open the panel so the steps and any problem are visible.
     setScreen('homeScreen');
-    pushCard.classList.remove('hidden');
-    pushCard.scrollIntoView({ block: 'center' });
+    setPushPanel(true);
     await turnOnPhoneNotifications();
   }
 });
@@ -1703,7 +1746,7 @@ async function logout() {
   // no internet); the server session then simply expires on its own.
   // Unlink this phone first so the next person here gets no alerts meant for this customer.
   if (currentSession) await turnOffPhoneNotifications(currentSession.access_token);
-  pushCard.classList.add('hidden');
+  setPushPanel(false);
   try {
     if (currentSession && supabaseClient) {
       await supabaseClient.signOut(currentSession.access_token);

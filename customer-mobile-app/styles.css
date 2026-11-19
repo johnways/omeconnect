@@ -792,6 +792,193 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
   .profile-meta { grid-template-columns: 1fr; }
 }
 
+/* ---------------------------------------------------------------- Top-bar pop-up button */
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.icon-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--white);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+}
+.icon-pill svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transform-origin: 50% 10%; }
+.icon-pill:hover { background: rgba(255, 255, 255, 0.2); }
+.icon-pill.open { background: var(--white); color: var(--navy-800); border-color: var(--white); }
+.icon-pill.on svg { color: #86efac; }
+.icon-pill.on.open svg { color: var(--green-600); }
+.pill-dot {
+  position: absolute;
+  top: 6px;
+  left: 20px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber-500);
+  box-shadow: 0 0 0 2px var(--navy-800);
+}
+/* Gently ring the bell while pop-ups are still off. */
+.icon-pill:not(.on):not(.open) svg { animation: bell-ring 3.2s ease-in-out 1s infinite; }
+@keyframes bell-ring {
+  0%, 82%, 100% { transform: rotate(0); }
+  85% { transform: rotate(14deg); }
+  89% { transform: rotate(-12deg); }
+  93% { transform: rotate(8deg); }
+  97% { transform: rotate(-4deg); }
+}
+
+/* The pop-up settings panel slides down under the greeting. */
+.home-top .push-card {
+  margin: 0 0 14px;
+  color: var(--text);
+  box-shadow: var(--shadow-3);
+  animation: panel-down 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: top right;
+}
+@keyframes panel-down {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.push-card-row { position: relative; }
+.push-bell {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #a15c00;
+  background: var(--amber-50);
+}
+.push-bell svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.push-card-row > div { flex: 1; padding-right: 28px; }
+.close-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.close-btn:hover { background: #f1f5f9; color: var(--text); }
+.close-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+
+/* Unread count on the Alerts tab */
+.nav-count {
+  position: absolute;
+  top: 4px;
+  left: calc(50% + 6px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--red-600);
+  color: var(--white);
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--white);
+  animation: badge-pop 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes badge-pop { from { transform: scale(0.4); } to { transform: scale(1); } }
+.section-head.first h3 { margin-top: 2px; }
+
+/* ==========================================================================
+   Button motion: lift on hover, press-down on tap, touch ripple, smooth focus.
+   The ripple starts where the finger/mouse touched (--rx/--ry set by live.js).
+   ========================================================================== */
+.primary-btn, .secondary-btn, .action-card, .setting-item, .icon-pill, .notification-item,
+.text-btn, .link-btn, .back-btn, .close-btn, .avatar, .nav-item, .ai-fab, .small-btn, .tiny-action {
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ripple layer */
+.primary-btn, .secondary-btn, .action-card, .setting-item, .notification-item, .icon-pill {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.primary-btn::before, .secondary-btn::before, .action-card::before,
+.setting-item::before, .notification-item::before, .icon-pill::before {
+  content: "";
+  position: absolute;
+  left: var(--rx, 50%);
+  top: var(--ry, 50%);
+  z-index: -1;
+  width: 240%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.55s ease-out, opacity 0.6s ease-out;
+  pointer-events: none;
+}
+.primary-btn::before { background: #ffffff; }
+.primary-btn:active::before, .secondary-btn:active::before, .action-card:active::before,
+.setting-item:active::before, .notification-item:active::before, .icon-pill:active::before {
+  opacity: 0.16;
+  transform: translate(-50%, -50%) scale(1);
+  transition: transform 0s, opacity 0s;
+}
+
+/* Hover lift (pointer devices only, so phones don't get "stuck" hovers) */
+@media (hover: hover) {
+  .primary-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(22, 82, 197, 0.28); }
+  .secondary-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15, 27, 45, 0.08); }
+  .action-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); }
+  .action-card:hover .action-icon { transform: scale(1.08) rotate(-4deg); }
+  .notification-item:hover { transform: translateX(2px); box-shadow: var(--shadow-2); }
+  .avatar:hover { transform: scale(1.06); }
+  .back-btn:hover::before { transform: translateX(-2px); }
+  .setting-item:hover::after { transform: translateX(3px); }
+  .ai-fab:hover { transform: translateY(-3px) scale(1.05); }
+}
+.action-icon { transition: transform 0.22s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.back-btn::before, .setting-item::after { transition: transform 0.18s ease; }
+
+/* Press-down */
+.primary-btn:active:not(:disabled), .secondary-btn:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
+.action-card:active { transform: scale(0.95); }
+.setting-item:active, .notification-item:active { transform: scale(0.99); }
+.icon-pill:active, .avatar:active, .close-btn:active, .back-btn:active, .small-btn:active { transform: scale(0.9); }
+.text-btn:active, .link-btn:active { transform: scale(0.96); opacity: 0.75; }
+.ai-fab:active { transform: scale(0.92); }
+
+/* Bottom menu: icon springs up when a tab is chosen */
+.nav-item svg { transition: transform 0.2s cubic-bezier(0.2, 1.4, 0.4, 1); }
+.nav-item:active svg { transform: scale(0.85); }
+.nav-item.active svg { animation: tab-pop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
+.nav-item.active::before { animation: tab-bar 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes tab-pop { 0% { transform: scale(0.8) translateY(2px); } 100% { transform: none; } }
+@keyframes tab-bar { from { width: 0; opacity: 0; } to { width: 28px; opacity: 1; } }
+
+/* Busy buttons (while a request is running) pulse gently */
+.primary-btn:disabled { animation: busy-pulse 1.2s ease-in-out infinite; }
+@keyframes busy-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 0.85; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
