@@ -166,8 +166,61 @@ function renderAccountSummary() {
   profileArea.textContent = (account && account.service_area) || 'Not linked';
 }
 
+// Bar chart of kWh per month (latest 12 bills, oldest on the left).
+function renderUsageChart() {
+  const card = document.getElementById('usageCard');
+  const chart = document.getElementById('usageChart');
+  const trend = document.getElementById('usageTrend');
+  if (!card || !chart) return;
+  const points = currentCustomer.bills
+    .filter((bill) => bill.consumption_kwh !== null && bill.consumption_kwh !== undefined && !Number.isNaN(Number(bill.consumption_kwh)))
+    .slice(0, 12)
+    .reverse()
+    .map((bill) => ({
+      kwh: Number(bill.consumption_kwh),
+      label: String(bill.billing_month || ''),
+      short: String(bill.billing_month || '').slice(0, 3),
+      amount: bill.outstanding_balance ?? bill.total_amount
+    }));
+  card.classList.toggle('hidden', points.length === 0);
+  if (!points.length) return;
+
+  const W = 320;
+  const H = 150;
+  const top = 18;
+  const bottom = 22;
+  const max = Math.max(...points.map((p) => p.kwh), 1);
+  const slot = W / points.length;
+  const barW = Math.min(28, slot * 0.6);
+  const bars = points.map((p, i) => {
+    const h = Math.max(2, ((H - top - bottom) * p.kwh) / max);
+    const x = i * slot + (slot - barW) / 2;
+    const y = H - bottom - h;
+    const latest = i === points.length - 1;
+    const tip = `${p.label}: ${p.kwh} kWh${p.amount !== null && p.amount !== undefined ? ` · ${formatCurrency(p.amount)}` : ''}`;
+    return `<g class="bar-group"><title>${escapeHtml(tip)}</title>`
+      + `<rect class="bar${latest ? ' latest' : ''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="5" style="animation-delay:${i * 40}ms" />`
+      + `<text class="val" x="${(x + barW / 2).toFixed(1)}" y="${(y - 5).toFixed(1)}">${escapeHtml(Math.round(p.kwh))}</text>`
+      + `<text class="mon" x="${(x + barW / 2).toFixed(1)}" y="${H - 6}">${escapeHtml(p.short)}</text></g>`;
+  }).join('');
+  chart.innerHTML = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true"><line class="base" x1="0" y1="${H - bottom}" x2="${W}" y2="${H - bottom}" />${bars}</svg>`;
+  chart.setAttribute('aria-label', `Electricity use per month: ${points.map((p) => `${p.label} ${p.kwh} kWh`).join(', ')}`);
+
+  // Compare the latest month with the one before.
+  if (points.length >= 2 && points[points.length - 2].kwh > 0) {
+    const now = points[points.length - 1];
+    const before = points[points.length - 2];
+    const change = Math.round(((now.kwh - before.kwh) / before.kwh) * 100);
+    trend.textContent = change === 0 ? `Same as ${before.short}` : `${change > 0 ? '▲' : '▼'} ${Math.abs(change)}% vs ${before.short}`;
+    trend.className = `trend ${change > 0 ? 'up' : change < 0 ? 'down' : 'same'}`;
+  } else {
+    trend.className = 'trend hidden';
+  }
+}
+
 function renderBills() {
   if (!billList) return;
+  renderUsageChart();
 
   if (!currentCustomer.bills.length) {
     billList.innerHTML = '<p class="empty-state">No bill is available for this verified account.</p>';
@@ -311,10 +364,23 @@ function stopAutoRefresh() {
 }
 
 // ---------------------------------------------------------------- Live session
-// Realtime updates + keeping the sign-in valid. The refresh token is kept in
-// sessionStorage (this tab/app session only, cleared when it is closed) so an
-// update reload does not sign the customer out.
+// Realtime updates + keeping the sign-in valid. The refresh token is kept so
+// a reload or app restart does not sign the customer out:
+//  - "Keep me signed in" ticked (default): localStorage — survives closing the app.
+//  - not ticked (shared phone): sessionStorage — forgotten when the app closes.
+// Logout always removes it from both.
 const SESSION_KEY = 'omeconnect.customer.session';
+const REMEMBER_KEY = 'omeconnect.customer.remember';
+const rememberMeBox = document.getElementById('rememberMe');
+
+function wantsToStaySignedIn() {
+  try { return localStorage.getItem(REMEMBER_KEY) !== '0'; } catch { return false; }
+}
+function storeRememberChoice() {
+  try { localStorage.setItem(REMEMBER_KEY, rememberMeBox.checked ? '1' : '0'); } catch { /* ignore */ }
+}
+rememberMeBox.checked = wantsToStaySignedIn();
+rememberMeBox.addEventListener('change', storeRememberChoice);
 const LIVE_TABLES = [
   'notifications', 'electricity_bills', 'payments', 'customer_accounts',
   'account_verification_requests', 'announcements', 'complaints', 'users'
@@ -327,13 +393,26 @@ let liveConcernsDue = false;
 function saveSessionForReload() {
   try {
     if (currentSession && currentSession.refresh_token) {
-      sessionStorage.setItem(SESSION_KEY, currentSession.refresh_token);
+      const keep = wantsToStaySignedIn();
+      (keep ? localStorage : sessionStorage).setItem(SESSION_KEY, currentSession.refresh_token);
+      (keep ? sessionStorage : localStorage).removeItem(SESSION_KEY);
     }
   } catch { /* storage unavailable: reload simply means signing in again */ }
 }
 
 function forgetSavedSession() {
   try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+  try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+}
+
+function readSavedSession() {
+  try {
+    const fromDevice = localStorage.getItem(SESSION_KEY);
+    if (fromDevice) return { token: fromDevice, store: localStorage };
+    const fromTab = sessionStorage.getItem(SESSION_KEY);
+    if (fromTab) return { token: fromTab, store: sessionStorage };
+  } catch { /* storage blocked */ }
+  return null;
 }
 
 function onLiveChange({ table }) {
@@ -623,22 +702,32 @@ pushSettingButton.addEventListener('click', async () => {
   }
 });
 
-// After a reload (e.g. an app update), sign back in with this session's token.
+// After a reload, an app update or reopening the app, sign back in with the saved token.
+let resumingSession = false;
 async function resumeSavedSession() {
-  if (appConfig.demoMode || !supabaseClient) return false;
-  let refreshToken = null;
-  try { refreshToken = sessionStorage.getItem(SESSION_KEY); } catch { return false; }
-  if (!refreshToken) return false;
-  forgetSavedSession(); // a refresh token works once; a new one is saved on success
+  if (appConfig.demoMode || !supabaseClient || currentSession || resumingSession) return false;
+  const saved = readSavedSession();
+  if (!saved) return false;
+  resumingSession = true;
   setMessage('Signing you back in…', 'success');
+  let session;
   try {
-    const session = await supabaseClient.refreshSession(refreshToken);
+    session = await supabaseClient.refreshSession(saved.token);
+  } catch (error) {
+    resumingSession = false;
+    setMessage('', '');
+    // No signal: keep the saved sign-in and try again when the phone is back online.
+    // Server said no (expired / signed out elsewhere): forget it.
+    if (!(error instanceof TypeError)) forgetSavedSession();
+    return false;
+  }
+  forgetSavedSession(); // the old token is used up; the new one is saved on success
+  try {
     const signedIn = await completeSignIn(() => loadCustomerFromSession(session));
     if (signedIn) setMessage('', '');
     return signedIn;
-  } catch {
-    setMessage('', '');
-    return false;
+  } finally {
+    resumingSession = false;
   }
 }
 
@@ -1010,6 +1099,7 @@ loginForm.addEventListener('submit', async (event) => {
 
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
+  storeRememberChoice();
   await completeSignIn(() => loadCustomerData(email, password));
 });
 
@@ -1033,6 +1123,7 @@ document.getElementById('googleSignInButton').addEventListener('click', async ()
       setMessage('Google sign-in is not set up yet. Please use email or try again later.', 'error');
       return;
     }
+    storeRememberChoice(); // Google sign-in leaves the page, so remember the choice first
     await supabaseClient.startGoogleSignIn(appReturnUrl());
   } catch (error) {
     setMessage(error.message, 'error');
@@ -1834,6 +1925,7 @@ if (appConfig.demoMode) {
     window.OMECO_LIVE.requireOnline({
       appName: 'OMECOnnect',
       onBackOnline: () => {
+        if (!currentSession) { void resumeSavedSession(); return; }
         void keepSessionFresh();
         void refreshCustomerData();
         void loadConcerns();

@@ -169,6 +169,49 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .auth-divider::before,
 .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+.remember-row input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: var(--blue-600);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- Usage chart (Bills) */
+.usage-card { margin-bottom: 14px; }
+.usage-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+.usage-head h3 { margin: 0; font-size: 0.98rem; font-weight: 700; }
+.trend { padding: 3px 9px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; white-space: nowrap; }
+.trend.up { color: var(--red-600); background: var(--red-50); }
+.trend.down { color: var(--green-600); background: var(--green-50); }
+.trend.same { color: var(--muted); background: #f1f5f9; }
+[data-theme="dark"] .trend.same { background: #1a263d; }
+.usage-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.usage-chart .bar { fill: #bcd3fb; transition: fill 0.2s ease; }
+.usage-chart .bar.latest { fill: var(--blue-600); }
+.usage-chart .bar-group:hover .bar { fill: var(--amber-500); }
+.usage-chart .val { font-size: 10px; font-weight: 700; fill: var(--text-2); text-anchor: middle; }
+.usage-chart .mon { font-size: 10px; font-weight: 600; fill: var(--muted); text-anchor: middle; }
+.usage-chart .base { stroke: var(--line); stroke-width: 1; }
+[data-theme="dark"] .usage-chart .bar { fill: #2a4170; }
+[data-theme="dark"] .usage-chart .bar.latest { fill: var(--blue-600); }
+.usage-chart .bar { transform-origin: bottom; transform-box: fill-box; animation: bar-grow 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.usage-note { margin: 6px 0 0; font-size: 0.76rem; color: var(--muted); }
+
 .helper-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 
 .feature-pills {
@@ -1119,3 +1162,7 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Language switch (EN / FIL) */
+.lang-pill { padding: 0 11px; font-weight: 800; letter-spacing: 0.04em; }
+.login-lang { position: absolute; top: 16px; left: 4px; }

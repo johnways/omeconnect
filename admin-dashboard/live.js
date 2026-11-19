@@ -298,5 +298,55 @@
     target.style.setProperty('--ry', `${event.clientY - box.top}px`);
   }, { passive: true });
 
-  window.OMECO_LIVE = { createLiveUpdates, requireOnline, watchForNewVersion };
+  // ------------------------------------------------------------ 5. Error reporting
+  // Unexpected errors are sent to OMECO (system_logs, admin Security page) so
+  // problems on customers' phones can be found and fixed. Only the page path
+  // and a short error description are sent — never form contents or tokens.
+  const reported = new Set();
+  let reportsLeft = 5; // per page visit
+  const stripUrl = (text) => String(text || '').replace(/(https?:\/\/[^\s?#)]+)[?#][^\s)]*/g, '$1');
+
+  function reportError(message, source) {
+    try {
+      const text = stripUrl(message).slice(0, 500);
+      if (!text || reportsLeft <= 0 || reported.has(text) || !config.supabaseUrl || !config.supabaseAnonKey) return;
+      // Expected, harmless browser noise.
+      if (/ResizeObserver loop|Script error\.?$|Load failed|Failed to fetch|NetworkError|AbortError/i.test(text)) return;
+      reported.add(text);
+      reportsLeft -= 1;
+      const app = location.pathname.startsWith('/admin-dashboard') ? 'admin' : 'customer';
+      fetch(`${String(config.supabaseUrl).replace(/\/+$/, '')}/rest/v1/rpc/log_client_error`, {
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          apikey: config.supabaseAnonKey,
+          Authorization: `Bearer ${config.supabaseAnonKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          p_message: text,
+          p_source: stripUrl(source).slice(0, 300),
+          p_app: app,
+          p_page: location.pathname,
+          p_user_agent: navigator.userAgent.slice(0, 200)
+        })
+      }).catch(() => {});
+    } catch {
+      // Reporting must never cause another error.
+    }
+  }
+
+  window.addEventListener('error', (event) => {
+    if (!event.message) return; // resource load errors (images etc.) have no message
+    const where = event.filename ? `${event.filename}:${event.lineno}:${event.colno}` : '';
+    reportError(event.message, where);
+  });
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const message = reason && reason.message ? reason.message : String(reason);
+    const stack = reason && reason.stack ? String(reason.stack).split('\n').slice(0, 3).join(' | ') : '';
+    reportError(`Unhandled: ${message}`, stack);
+  });
+
+  window.OMECO_LIVE = { createLiveUpdates, requireOnline, watchForNewVersion, reportError };
 })();

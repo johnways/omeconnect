@@ -718,10 +718,12 @@
     if (!live()) return;
     let admins;
     let audit;
+    let errors;
     try {
-      [admins, audit] = await Promise.all([
+      [admins, audit, errors] = await Promise.all([
         supabaseClient.select('admin_accounts?select=employee_id,department,created_at,users(full_name,email)&order=created_at.asc', token()),
-        supabaseClient.select('audit_logs?select=created_at,action,entity_type,details,users(full_name,email)&order=created_at.desc&limit=50', token())
+        supabaseClient.select('audit_logs?select=created_at,action,entity_type,details,users(full_name,email)&order=created_at.desc&limit=50', token()),
+        supabaseClient.select('system_logs?select=created_at,message,metadata&level=eq.client_error&order=created_at.desc&limit=50', token())
       ]);
     } catch (error) {
       toast(`Could not load security data: ${error.message}`, 'error');
@@ -743,6 +745,22 @@
       el('td', {}, (entry.users && (entry.users.full_name || entry.users.email)) || 'System'),
       el('td', { class: 'mono' }, entry.action),
       el('td', {}, describe(entry) || '—'))), 'No admin actions recorded yet.');
+    // Short device description from the browser's user agent.
+    const device = (ua) => {
+      const s = String(ua || '');
+      const os = /Android/i.test(s) ? 'Android' : /iPhone|iPad/i.test(s) ? 'iPhone' : /Windows/i.test(s) ? 'Windows' : /Mac OS/i.test(s) ? 'Mac' : 'Other';
+      const browser = /SamsungBrowser/i.test(s) ? 'Samsung Internet' : /Edg\//i.test(s) ? 'Edge' : /Chrome/i.test(s) ? 'Chrome' : /Safari/i.test(s) ? 'Safari' : /Firefox/i.test(s) ? 'Firefox' : '';
+      return [os, browser].filter(Boolean).join(' · ');
+    };
+    setRows('errorRows', 'errorEmpty', (errors || []).map((entry) => {
+      const m = entry.metadata || {};
+      return el('tr', {},
+        el('td', {}, fmtDate(entry.created_at)),
+        el('td', {}, m.app === 'admin' ? 'Admin' : 'Customer'),
+        el('td', { class: 'mono' }, m.page || '—'),
+        el('td', { title: m.source || '' }, entry.message),
+        el('td', {}, device(m.user_agent)));
+    }), 'No app errors reported. 🎉');
   }
 
   // ---------------------------------------------------------------- wiring
