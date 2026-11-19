@@ -224,21 +224,54 @@
     $('complaintOpenCount').textContent = String(open);
   }
 
+  // Icon + colour per notification type.
+  const BELL_KIND = {
+    admin_verification: ['verify', 'M12 3 5 6v6c0 4.4 3 8.1 7 9 4-.9 7-4.6 7-9V6zM9 12l2 2 4-4'],
+    admin_complaint: ['concern', 'M4 5h16v11H8l-4 4zM8 9h8M8 12h5'],
+    admin_meter: ['meter', 'M12 21a9 9 0 1 1 9-9M12 12l4-4'],
+    admin_alert: ['alert', 'M12 9v4M12 17h.01M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0z']
+  };
+  function timeAgo(value) {
+    const ms = Date.now() - new Date(value).getTime();
+    if (!Number.isFinite(ms)) return '';
+    const min = Math.round(ms / 60000);
+    if (min < 1) return 'just now';
+    if (min < 60) return `${min} min ago`;
+    const h = Math.round(min / 60);
+    if (h < 24) return `${h} h ago`;
+    const d = Math.round(h / 24);
+    return d < 7 ? `${d} day${d === 1 ? '' : 's'} ago` : fmtDate(value, false);
+  }
+  function bellIcon(type) {
+    const [kind, path] = BELL_KIND[type] || ['info', 'M12 8h.01M11 12h1v5h1M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z'];
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    const shape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    shape.setAttribute('d', path);
+    svg.append(shape);
+    return el('span', { class: `bell-icon kind-${kind}` }, svg);
+  }
+
   function renderBell() {
     const unread = state.notifications.filter((n) => !n.is_read);
     $('bellCount').textContent = String(unread.length);
     $('bellCount').classList.toggle('hidden', !unread.length);
+    $('bellSummary').textContent = unread.length ? `${unread.length} new` : "You're all caught up";
+    $('bellMarkRead').disabled = !unread.length;
     const list = $('bellList');
     if (!state.notifications.length) {
       list.replaceChildren(el('p', { class: 'bell-empty' }, 'No notifications yet. New verification requests and concerns appear here.'));
       return;
     }
-    list.replaceChildren(...state.notifications.map((n) => {
+    const makeItem = (n) => {
       const item = el('button', { type: 'button', class: `bell-item${n.is_read ? '' : ' unread'}` },
-        el('strong', {}, n.title), el('span', {}, n.message), el('small', {}, fmtDate(n.created_at)));
+        bellIcon(n.type),
+        el('span', { class: 'bell-text' },
+          el('strong', {}, n.title), el('span', {}, n.message),
+          el('small', { title: fmtDate(n.created_at) }, timeAgo(n.created_at))));
       item.addEventListener('click', async () => {
-        $('bellPanel').classList.add('hidden');
-        $('bellButton').setAttribute('aria-expanded', 'false');
+        closeBell({ restoreFocus: false });
         if (!n.is_read) {
           await supabaseClient.update(`notifications?id=eq.${n.id}`, { is_read: true }, token()).catch(() => {});
           n.is_read = true;
@@ -250,8 +283,44 @@
         else if (n.type === 'admin_alert') setView('securityView');
       });
       return item;
-    }));
+    };
+    const fresh = state.notifications.filter((n) => !n.is_read);
+    const earlier = state.notifications.filter((n) => n.is_read);
+    list.replaceChildren(
+      ...(fresh.length ? [el('p', { class: 'bell-group' }, 'New'), ...fresh.map(makeItem)] : []),
+      ...(earlier.length ? [el('p', { class: 'bell-group' }, 'Earlier'), ...earlier.map(makeItem)] : []));
   }
+
+  // ---------------------------------------------------------------- notification drawer (left side)
+  // Moved to <body> so the top bar can never clip it.
+  const bellPanel = $('bellPanel');
+  const bellBackdrop = $('bellBackdrop');
+  document.body.append(bellBackdrop, bellPanel);
+  function openBell() {
+    bellPanel.classList.add('open');
+    bellBackdrop.classList.add('open');
+    bellPanel.setAttribute('aria-hidden', 'false');
+    $('bellButton').setAttribute('aria-expanded', 'true');
+    document.body.classList.add('bell-open');
+    if (!live()) {
+      $('bellList').replaceChildren(el('p', { class: 'bell-empty' }, 'Notifications need a real Supabase connection.'));
+    }
+    setTimeout(() => $('bellClose').focus(), 60);
+  }
+  function closeBell({ restoreFocus = true } = {}) {
+    if (!bellPanel.classList.contains('open')) return;
+    bellPanel.classList.remove('open');
+    bellBackdrop.classList.remove('open');
+    bellPanel.setAttribute('aria-hidden', 'true');
+    $('bellButton').setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('bell-open');
+    if (restoreFocus) $('bellButton').focus();
+  }
+  $('bellClose').addEventListener('click', () => closeBell());
+  bellBackdrop.addEventListener('click', () => closeBell());
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && bellPanel.classList.contains('open')) closeBell();
+  });
 
   async function poll({ quiet = false } = {}) {
     if (!live()) return;
@@ -1017,10 +1086,6 @@
     if (refresh) {
       void (refresh.dataset.refresh === 'verification' ? showVerification() : showComplaints());
     }
-    if (!event.target.closest('.bell-wrap')) {
-      $('bellPanel').classList.add('hidden');
-      $('bellButton').setAttribute('aria-expanded', 'false');
-    }
   });
 
   $('verificationTabs').addEventListener('click', (event) => {
@@ -1040,13 +1105,8 @@
   });
 
   $('bellButton').addEventListener('click', () => {
-    const panel = $('bellPanel');
-    const opening = panel.classList.contains('hidden');
-    panel.classList.toggle('hidden', !opening);
-    $('bellButton').setAttribute('aria-expanded', String(opening));
-    if (opening && !live()) {
-      $('bellList').replaceChildren(el('p', { class: 'bell-empty' }, 'Notifications need a real Supabase connection.'));
-    }
+    if (bellPanel.classList.contains('open')) closeBell();
+    else openBell();
   });
 
   $('bellMarkRead').addEventListener('click', async () => {
@@ -1161,6 +1221,7 @@
   };
 
   window.adminOnSignOut = () => {
+    closeBell({ restoreFocus: false });
     stopLive();
     clearInterval(state.pollTimer);
     state.pollTimer = null;
