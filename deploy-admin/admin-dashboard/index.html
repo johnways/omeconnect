@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMECOnnect Admin</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <section id="loginScreen" class="screen active">
+        <div class="login-card">
+          <div class="brand-box">
+            <div class="brand-mark">OM</div>
+            <div>
+              <h1>OMECOnnect</h1>
+              <p>Admin Access</p>
+            </div>
+          </div>
+
+          <form id="loginForm">
+            <label>
+              Email
+              <input type="email" id="email" autocomplete="username" required />
+            </label>
+
+            <label>
+              Password
+              <input type="password" id="password" autocomplete="current-password" required />
+            </label>
+
+            <button type="submit" id="loginButton">Sign In</button>
+          </form>
+
+          <p id="loginMessage" class="login-message hidden" role="alert"></p>
+          <div id="demoNote" class="demo-note hidden">
+            Demo mode: admin@omeco.test / admin123 (sample data only)
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboardScreen" class="screen">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">OMECO Operations</p>
+            <h2>Administration Dashboard</h2>
+          </div>
+
+          <div class="topbar-actions">
+            <div class="bell-wrap">
+              <button id="bellButton" class="ghost-btn bell-btn" type="button" aria-label="Notifications" aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 16v-5a6 6 0 0 0-12 0v5l-2 2h16zM10 20a2 2 0 0 0 4 0" /></svg>
+                <span id="bellCount" class="bell-count hidden">0</span>
+              </button>
+              <div id="bellPanel" class="bell-panel hidden" role="dialog" aria-label="Notifications">
+                <div class="bell-head">
+                  <strong>Notifications</strong>
+                  <button id="bellMarkRead" class="link-btn" type="button">Mark all as read</button>
+                </div>
+                <div id="bellList" class="bell-list"></div>
+              </div>
+            </div>
+            <button class="ghost-btn" type="button" data-export-report>Export Report</button>
+            <button id="logoutBtn" class="danger-btn" type="button">Logout</button>
+          </div>
+        </header>
+
+        <main class="dashboard-shell">
+          <aside class="sidebar">
+            <div class="nav-title">Navigation</div>
+            <nav>
+              <a class="nav-item active" href="#" data-view="overviewView">Overview</a>
+              <a class="nav-item" href="#" data-view="verificationView">Verification <span class="nav-badge hidden" id="navVerificationBadge">0</span></a>
+              <a class="nav-item" href="#" data-view="customersView">Customers</a>
+              <a class="nav-item" href="#" data-view="billsView">Bills</a>
+              <a class="nav-item" href="#" data-view="announcementsView">Announcements</a>
+              <a class="nav-item" href="#" data-view="complaintsView">Complaints <span class="nav-badge hidden" id="navComplaintBadge">0</span></a>
+              <a class="nav-item" href="#" data-view="reportsView">Reports</a>
+              <a class="nav-item" href="#" data-view="securityView">Security</a>
+            </nav>
+          </aside>
+
+          <section class="content view" id="customersView">
+            <div class="page-head">
+              <div>
+                <h3 class="page-title">Consumers</h3>
+                <p class="page-sub" id="customerSummary">Loading…</p>
+              </div>
+              <div class="panel-actions">
+                <button id="refreshCustomers" class="light-btn icon-btn" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" /></svg>
+                  Refresh
+                </button>
+                <button id="exportCustomers" class="primary-btn icon-btn" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14" /></svg>
+                  Export CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="kpi-row">
+              <article class="kpi">
+                <span class="kpi-label">Total consumers</span>
+                <strong id="kpiTotal">0</strong>
+                <small>registered in OMECOnnect</small>
+              </article>
+              <article class="kpi kpi-green">
+                <span class="kpi-label">Verified accounts</span>
+                <strong id="kpiVerified">0</strong>
+                <small>linked to an OMECO account</small>
+              </article>
+              <article class="kpi kpi-amber">
+                <span class="kpi-label">Pending verification</span>
+                <strong id="kpiPending">0</strong>
+                <small>waiting for staff review</small>
+              </article>
+              <article class="kpi kpi-grey">
+                <span class="kpi-label">No location set</span>
+                <strong id="kpiNoLocation">0</strong>
+                <small>ask them to update Profile</small>
+              </article>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Service areas</h3>
+                  <small class="muted">OMECO coverage · Occidental Mindoro · select an area to filter</small>
+                </div>
+              </div>
+              <div id="municipalityChips" class="area-grid" aria-label="Filter by municipality"></div>
+
+              <div id="barangaySection" class="barangay-section hidden">
+                <p class="section-label">Barangays in <strong id="barangaySectionTitle"></strong></p>
+                <div id="barangayChips" class="chip-row" aria-label="Filter by barangay"></div>
+              </div>
+            </div>
+
+            <div class="panel table-panel">
+              <div class="filter-row">
+                <label class="grow search-field">
+                  <span class="sr-only">Search</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                  <input id="filterSearch" type="search" placeholder="Search name, mobile, email or account no." />
+                </label>
+                <label>
+                  <span>Municipality</span>
+                  <select id="filterMunicipality"></select>
+                </label>
+                <label>
+                  <span>Barangay</span>
+                  <select id="filterBarangay" disabled></select>
+                </label>
+                <label>
+                  <span>Account status</span>
+                  <select id="filterStatus">
+                    <option value="">All statuses</option>
+                    <option value="verified">Verified</option>
+                    <option value="pending">Pending verification</option>
+                    <option value="none">Not linked</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="table-wrap">
+                <table class="consumer-table">
+                  <thead>
+                    <tr>
+                      <th>Consumer</th>
+                      <th>Mobile</th>
+                      <th>Location</th>
+                      <th>OMECO account</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customerRows"></tbody>
+                </table>
+              </div>
+              <div id="customersEmpty" class="empty-state hidden">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
+                <p id="customersEmptyText"></p>
+              </div>
+            </div>
+          </section>
+
+          <section class="content view active" id="overviewView">
+            <div class="stats-grid">
+              <button type="button" class="stat-card primary stat-link" data-go="customersView">
+                <span>Total Customers</span>
+                <strong id="customersCount">—</strong>
+                <small id="customersCountNote">registered in OMECOnnect</small>
+              </button>
+              <button type="button" class="stat-card yellow stat-link" data-go="verificationView">
+                <span>Pending Verifications</span>
+                <strong id="pendingVerificationCount">—</strong>
+                <small>waiting for staff review</small>
+              </button>
+              <button type="button" class="stat-card blue stat-link" data-go="complaintsView">
+                <span>Open Concerns</span>
+                <strong id="complaintCount">—</strong>
+                <small id="complaintCountNote">not yet resolved</small>
+              </button>
+              <button type="button" class="stat-card green stat-link" data-go="announcementsView">
+                <span>Announcements</span>
+                <strong id="announcementCount">—</strong>
+                <small>currently published</small>
+              </button>
+            </div>
+
+            <div class="section-grid">
+              <div class="panel">
+                <div class="panel-header">
+                  <h3>Customer Verification</h3>
+                  <button class="light-btn" type="button" data-go="verificationView">Review</button>
+                </div>
+                <table>
+                  <thead>
+                    <tr><th>Name</th><th>Account</th><th>Area</th><th>Status</th></tr>
+                  </thead>
+                  <tbody id="overviewVerificationRows"></tbody>
+                </table>
+                <p id="overviewVerificationEmpty" class="empty-note hidden">No verification requests yet.</p>
+              </div>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <h3>Complaint Queue</h3>
+                  <button class="light-btn" type="button" data-go="complaintsView">Manage</button>
+                </div>
+                <ul class="list-stack" id="overviewComplaintList"></ul>
+                <p id="overviewComplaintEmpty" class="empty-note hidden">No open concerns.</p>
+              </div>
+            </div>
+
+            <div class="panel large-panel">
+              <div class="panel-header">
+                <h3>Recent Announcements</h3>
+                <button class="light-btn" type="button" data-go="announcementsView" data-focus="announcementTitle">Create</button>
+              </div>
+              <div class="announcement-list" id="overviewAnnouncementList"></div>
+              <p id="overviewAnnouncementEmpty" class="empty-note hidden">No announcements yet.</p>
+            </div>
+          </section>
+
+          <!-- ---------------------------------------------------------- Verification -->
+          <section class="content view" id="verificationView">
+            <div class="page-head">
+              <div>
+                <h3 class="page-title">Account verification</h3>
+                <p class="page-sub">Customers asking to link their OMECO account number. Check it against OMECO records, then approve or reject.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="light-btn icon-btn" type="button" data-refresh="verification">Refresh</button>
+              </div>
+            </div>
+            <div class="panel table-panel">
+              <div class="tab-row" id="verificationTabs">
+                <button type="button" class="tab active" data-status="pending">Pending <span class="tab-count" id="verificationPendingCount">0</span></button>
+                <button type="button" class="tab" data-status="approved">Approved</button>
+                <button type="button" class="tab" data-status="rejected">Rejected</button>
+                <button type="button" class="tab" data-status="">All</button>
+              </div>
+              <div class="table-wrap">
+                <table class="consumer-table">
+                  <thead>
+                    <tr><th>Customer</th><th>Location</th><th>Account no. given</th><th>Submitted</th><th>Status</th><th class="actions-col">Action</th></tr>
+                  </thead>
+                  <tbody id="verificationRows"></tbody>
+                </table>
+              </div>
+              <p id="verificationEmpty" class="empty-note hidden">Nothing here.</p>
+            </div>
+          </section>
+
+          <!-- ---------------------------------------------------------- Complaints -->
+          <section class="content view" id="complaintsView">
+            <div class="page-head">
+              <div>
+                <h3 class="page-title">Concerns</h3>
+                <p class="page-sub">Update a concern's status. The customer is notified each time.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="light-btn icon-btn" type="button" data-refresh="complaints">Refresh</button>
+              </div>
+            </div>
+            <div class="panel table-panel">
+              <div class="tab-row" id="complaintTabs">
+                <button type="button" class="tab active" data-status="open">Open <span class="tab-count" id="complaintOpenCount">0</span></button>
+                <button type="button" class="tab" data-status="resolved">Resolved / closed</button>
+                <button type="button" class="tab" data-status="">All</button>
+              </div>
+              <div class="table-wrap">
+                <table class="consumer-table">
+                  <thead>
+                    <tr><th>Concern</th><th>Customer</th><th>Location</th><th>Submitted</th><th>Status</th><th class="actions-col">Action</th></tr>
+                  </thead>
+                  <tbody id="complaintRows"></tbody>
+                </table>
+              </div>
+              <p id="complaintEmpty" class="empty-note hidden">Nothing here.</p>
+            </div>
+          </section>
+
+          <!-- ---------------------------------------------------------- Announcements -->
+          <section class="content view" id="announcementsView">
+            <div class="page-head">
+              <div>
+                <h3 class="page-title">Announcements</h3>
+                <p class="page-sub">Publish outages, maintenance and advisories. Verified customers in the chosen area get an alert.</p>
+              </div>
+            </div>
+            <div class="two-col">
+              <form class="panel form-panel" id="announcementForm">
+                <h3>New announcement</h3>
+                <label>Title
+                  <input id="announcementTitle" maxlength="120" required placeholder="e.g. Scheduled power interruption" />
+                </label>
+                <label>Message
+                  <textarea id="announcementContent" rows="6" maxlength="2000" required placeholder="Date, time, affected barangays and what customers should do."></textarea>
+                </label>
+                <div class="form-grid">
+                  <label>Category
+                    <select id="announcementCategory">
+                      <option>Scheduled maintenance</option>
+                      <option>Power interruption</option>
+                      <option>Billing</option>
+                      <option>Advisory</option>
+                      <option>Other</option>
+                    </select>
+                  </label>
+                  <label>Affected area
+                    <select id="announcementArea"></select>
+                  </label>
+                </div>
+                <label class="check"><input type="checkbox" id="announcementUrgent" /> Mark as urgent</label>
+                <label class="check"><input type="checkbox" id="announcementPublish" checked /> Publish now (customers are notified)</label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn icon-btn" id="announcementSubmit">Publish announcement</button>
+                </div>
+              </form>
+              <div class="panel">
+                <div class="panel-header"><h3>All announcements</h3></div>
+                <div id="announcementAdminList" class="admin-list"></div>
+                <p id="announcementAdminEmpty" class="empty-note hidden">No announcements yet.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ---------------------------------------------------------- Bills -->
+          <section class="content view" id="billsView">
+            <div class="page-head">
+              <div>
+                <h3 class="page-title">Bills</h3>
+                <p class="page-sub">Add a bill to a verified account. The customer is notified and sees it in the app.</p>
+              </div>
+            </div>
+            <div class="two-col">
+              <form class="panel form-panel" id="billForm">
+                <h3>New bill</h3>
+                <label>Verified account
+                  <select id="billAccount" required></select>
+                </label>
+                <div class="form-grid">
+                  <label>Billing month
+                    <input id="billMonth" type="month" required />
+                  </label>
+                  <label>Due date
+                    <input id="billDue" type="date" required />
+                  </label>
+                  <label>Amount (₱)
+                    <input id="billAmount" type="number" min="0" step="0.01" required />
+                  </label>
+                  <label>Consumption (kWh)
+                    <input id="billKwh" type="number" min="0" step="0.01" />
+                  </label>
+                </div>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn icon-btn">Add bill</button>
+                </div>
+                <p id="billFormHint" class="muted small"></p>
+              </form>
+              <div class="panel table-panel">
+                <div class="table-wrap">
+                  <table class="consumer-table">
+                    <thead>
+                      <tr><th>Account</th><th>Month</th><th>Due</th><th>Amount</th><th>Status</th><th class="actions-col">Action</th></tr>
+                    </thead>
+                    <tbody id="billRows"></tbody>
+                  </table>
+                </div>
+                <p id="billEmpty" class="empty-note hidden">No bills yet.</p>
+              </div>
+            </div>
+          </section>
+
+          <!-- ---------------------------------------------------------- Reports -->
+          <section class="content view" id="reportsView">
+            <div class="page-head">
+              <div>
+                <h3 class="page-title">Reports</h3>
+                <p class="page-sub">Live summary from the database.</p>
+              </div>
+              <div class="panel-actions">
+                <button class="primary-btn icon-btn" type="button" data-export-report>Export report (CSV)</button>
+              </div>
+            </div>
+            <div class="two-col">
+              <div class="panel">
+                <div class="panel-header"><h3>Customers by municipality</h3></div>
+                <table>
+                  <thead><tr><th>Municipality</th><th>Customers</th><th>Verified</th><th>Pending</th></tr></thead>
+                  <tbody id="reportAreaRows"></tbody>
+                </table>
+              </div>
+              <div class="panel">
+                <div class="panel-header"><h3>Concerns</h3></div>
+                <table>
+                  <thead><tr><th>Type</th><th>Open</th><th>Resolved / closed</th><th>Total</th></tr></thead>
+                  <tbody id="reportConcernRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ---------------------------------------------------------- Security -->
+          <section class="content view" id="securityView">
+            <div class="page-head">
+              <div>
+                <h3 class="page-title">Security</h3>
+                <p class="page-sub">Who has admin access, and a record of every admin action.</p>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-header"><h3>Administrator accounts</h3></div>
+              <table>
+                <thead><tr><th>Name</th><th>Email</th><th>Employee ID</th><th>Department</th><th>Since</th></tr></thead>
+                <tbody id="adminRows"></tbody>
+              </table>
+              <p class="muted small">To add or remove an admin, ask your system administrator (it is done in Supabase → admin_accounts).</p>
+            </div>
+            <div class="panel table-panel">
+              <div class="panel-header pad"><h3>Audit log</h3><small class="muted">latest 50 actions</small></div>
+              <div class="table-wrap">
+                <table class="consumer-table">
+                  <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+                  <tbody id="auditRows"></tbody>
+                </table>
+              </div>
+              <p id="auditEmpty" class="empty-note hidden">No admin actions recorded yet.</p>
+            </div>
+          </section>
+        </main>
+      </section>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="supabase-client.js"></script>
+    <script src="live.js"></script>
+    <dialog id="modal" class="modal">
+      <form id="modalForm" method="dialog" class="modal-body">
+        <h3 id="modalTitle"></h3>
+        <div id="modalContent"></div>
+        <p id="modalError" class="login-message hidden" role="alert"></p>
+        <div class="modal-actions">
+          <button type="button" class="light-btn" id="modalCancel">Cancel</button>
+          <button type="submit" class="primary-btn" id="modalConfirm">Confirm</button>
+        </div>
+      </form>
+    </dialog>
+    <div id="toastHost" class="toast-host" aria-live="polite"></div>
+
+    <script src="script.js"></script>
+    <script src="admin-ops.js"></script>
+  </body>
+</html>
