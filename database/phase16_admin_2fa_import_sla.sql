@@ -180,9 +180,19 @@ GRANT EXECUTE ON FUNCTION public.import_bills(jsonb, boolean) TO authenticated;
 -- 3. Concern assignment and response-time targets.
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.complaints
-  ADD COLUMN IF NOT EXISTS assigned_to uuid REFERENCES public.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS assigned_to uuid,
   ADD COLUMN IF NOT EXISTS assigned_at timestamptz,
   ADD COLUMN IF NOT EXISTS due_by timestamptz;
+
+-- "Assigned to" points at staff (admin_accounts), NOT users: complaints keeps a
+-- single direct link to users (the customer), so users(...) embeds in the API
+-- stay unambiguous for old and new admin pages.
+ALTER TABLE public.admin_accounts DROP CONSTRAINT IF EXISTS admin_accounts_user_id_key;
+ALTER TABLE public.admin_accounts ADD CONSTRAINT admin_accounts_user_id_key UNIQUE (user_id);
+ALTER TABLE public.complaints DROP CONSTRAINT IF EXISTS complaints_assigned_to_fkey;
+ALTER TABLE public.complaints
+  ADD CONSTRAINT complaints_assigned_to_fkey FOREIGN KEY (assigned_to)
+  REFERENCES public.admin_accounts(user_id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS complaints_assigned_to_idx ON public.complaints (assigned_to);
 CREATE INDEX IF NOT EXISTS complaints_due_by_idx ON public.complaints (due_by);
