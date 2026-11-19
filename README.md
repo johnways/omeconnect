@@ -13,8 +13,17 @@ Customer app and admin dashboard for OMECO (Occidental Mindoro Electric Cooperat
 
 Backend: **Supabase** (Auth with email + Google, PostgreSQL with Row Level Security).
 
-## Live site (Vercel)
-Vercel serves the **`deploy/`** folder (project setting *Root Directory = deploy*).
+## Live sites (Vercel) — customer and admin are SEPARATE
+| Site | Vercel project | Root Directory | Address |
+|---|---|---|---|
+| Public customer app | `omeconnect` | `deploy` | https://omeconnect.vercel.app |
+| Private admin dashboard | `omeco-staff-enwd3uiw` | `deploy-admin` | https://omeco-staff-enwd3uiw.vercel.app — **share only with OMECO staff** |
+
+The public site contains **no admin files** (`/admin-dashboard` is 404 there) and never links to the admin site.
+The admin site contains only the admin dashboard, is never indexed by search engines (`noindex`, `robots.txt Disallow: /`)
+and is never cached. Admins must still sign in with an OMECO admin account; database rules (RLS) check admin rights
+on every request.
+
 After changing any app file:
 
 ```bash
@@ -24,7 +33,7 @@ git commit -m "Describe the change"
 git push
 ```
 
-Vercel publishes the new version automatically after each push.
+Vercel publishes **both** sites automatically after each push.
 
 ## Live updates and app updates
 - **Data changes appear instantly** in the customer app and admin dashboard (Supabase Realtime,
