@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OMECOnnect</title>
-    <meta name="theme-color" content="#0b5ed7" />
+    <meta name="theme-color" content="#0b2e6b" />
     <meta name="description" content="OMECO customer app: bills, outage alerts, concerns and the AI assistant." />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
@@ -16,23 +16,20 @@
   </head>
   <body>
     <div class="phone-shell">
-      <div class="statusbar">
-        <span>9:41</span>
-        <span>●●●</span>
-      </div>
       <p id="authMessage" class="form-message hidden" aria-live="polite"></p>
 
       <main class="app-screen active" id="loginScreen">
-        <div class="logo-wrap">
-          <div class="logo-badge">OM</div>
-          <div>
-            <h1>OMECOnnect</h1>
-            <p>Electricity Management</p>
+        <div class="brand-hero">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z" /></svg>
           </div>
+          <h1>OMECOnnect</h1>
+          <p>Occidental Mindoro Electric Cooperative, Inc.</p>
         </div>
 
         <div class="card glass-card">
-          <h2>Welcome back</h2>
+          <h2>Sign in to your account</h2>
+          <p class="muted-copy auth-sub">View your bills, get outage alerts and report concerns.</p>
           <form id="loginForm">
             <label>
               Email
@@ -42,7 +39,7 @@
               Password
               <input id="loginPassword" type="password" autocomplete="current-password" required />
             </label>
-            <button type="submit" class="primary-btn">Login</button>
+            <button type="submit" class="primary-btn">Sign in</button>
           </form>
           <div class="helper-row">
             <button class="text-btn" data-screen="registerScreen">Create account</button>
@@ -61,16 +58,17 @@
           <p id="demoNote" class="demo-note hidden"></p>
         </div>
 
-        <div class="feature-pills">
-          <span>Secure</span>
-          <span>Verified</span>
-          <span>AI Help</span>
-        </div>
+        <ul class="feature-pills" aria-label="Why OMECOnnect">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v6c0 4.4 3 8.1 7 9 4-.9 7-4.6 7-9V6z" /></svg>Secure sign-in</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4L19 6" /></svg>Verified accounts</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0" /></svg>Instant alerts</li>
+        </ul>
+        <p class="legal-links"><a href="/privacy.html">Privacy Policy</a> · <a href="/terms.html">Terms of Service</a></p>
       </main>
 
       <main class="app-screen" id="registerScreen">
         <div class="header-row">
-          <button class="back-btn" data-screen="loginScreen">←</button>
+          <button class="back-btn" aria-label="Back" data-screen="loginScreen">←</button>
           <h2>Register</h2>
           <span></span>
         </div>
@@ -117,7 +115,7 @@
 
       <main class="app-screen" id="otpScreen">
         <div class="header-row">
-          <button id="otpBackButton" class="back-btn" type="button">←</button>
+          <button id="otpBackButton" class="back-btn" aria-label="Back" type="button">←</button>
           <h2>Verify mobile</h2>
           <span></span>
         </div>
@@ -151,7 +149,7 @@
 
       <main class="app-screen" id="mfaScreen">
         <div class="header-row">
-          <button id="mfaBackButton" class="back-btn" type="button">←</button>
+          <button id="mfaBackButton" class="back-btn" aria-label="Back" type="button">←</button>
           <h2>Two-step check</h2>
           <span></span>
         </div>
@@ -171,7 +169,7 @@
 
       <main class="app-screen" id="forgotScreen">
         <div class="header-row">
-          <button class="back-btn" data-screen="loginScreen">←</button>
+          <button class="back-btn" aria-label="Back" data-screen="loginScreen">←</button>
           <h2>Reset password</h2>
           <span></span>
         </div>
@@ -209,25 +207,32 @@
       </main>
 
       <main class="app-screen" id="homeScreen">
-        <div class="header-row header-split">
-          <div>
-            <p class="eyebrow">Good morning</p>
-            <h2 id="customerName">Customer</h2>
+        <div class="home-top">
+          <div class="header-row header-split">
+            <div>
+              <p id="homeGreeting" class="eyebrow">Good day</p>
+              <h2 id="customerName">Customer</h2>
+            </div>
+            <button class="avatar" type="button" data-screen="profileScreen" aria-label="Open profile">MS</button>
           </div>
-          <div class="avatar">MS</div>
+
+          <div class="card hero-card">
+            <div class="hero-head">
+              <p id="accountLabel" class="eyebrow light">Verified account</p>
+              <h3 id="maskedAccountNumber">Account pending verification</h3>
+            </div>
+            <div class="hero-amount">
+              <span>Amount due</span>
+              <strong id="currentBillAmount">—</strong>
+              <small id="heroDueDate">Due date: —</small>
+            </div>
+            <div class="hero-actions">
+              <button class="primary-btn" type="button" data-screen="billsScreen">View bills</button>
+              <button class="secondary-btn" type="button" data-screen="complaintsScreen">Report issue</button>
+            </div>
+          </div>
         </div>
         <p id="demoDashboardBanner" class="demo-note hidden">DEMO DATA — Sample values only; not OMECO customer or billing data.</p>
-
-        <div class="card hero-card">
-          <div>
-            <p id="accountLabel" class="eyebrow light">Verified account</p>
-            <h3 id="maskedAccountNumber">Account pending verification</h3>
-          </div>
-          <div class="hero-amount">
-            <span>Current bill</span>
-            <strong id="currentBillAmount">—</strong>
-          </div>
-        </div>
 
         <div class="metrics-grid">
           <div class="mini-card blue">
@@ -242,6 +247,30 @@
             <span>Status</span>
             <strong id="dashboardStatus">—</strong>
           </div>
+        </div>
+
+        <h3 class="list-title">Services</h3>
+        <div class="quick-actions">
+          <button class="action-card" type="button" data-screen="billsScreen">
+            <span class="action-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /></svg></span>
+            <span>My Bills</span>
+            <strong id="quickBillAmount">—</strong>
+          </button>
+          <button class="action-card" type="button" data-screen="complaintsScreen">
+            <span class="action-icon orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg></span>
+            <span>Report</span>
+            <strong>Concerns</strong>
+          </button>
+          <button class="action-card" type="button" data-screen="announcementsScreen">
+            <span class="action-icon green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /></svg></span>
+            <span>Outage</span>
+            <strong>Advisories</strong>
+          </button>
+          <button class="action-card" type="button" data-screen="aiScreen">
+            <span class="action-icon violet" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12zM12 8.2l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z" /></svg></span>
+            <span>Assistant</span>
+            <strong>Ask AI</strong>
+          </button>
         </div>
 
         <section id="pushCard" class="card push-card hidden" aria-labelledby="pushTitle">
@@ -264,21 +293,6 @@
         </div>
 
         <div id="notificationList" class="list-box"></div>
-
-        <div class="quick-actions">
-          <button class="action-card" data-screen="billsScreen">
-            <span>My Bills</span>
-            <strong id="quickBillAmount">—</strong>
-          </button>
-          <button class="action-card" data-screen="complaintsScreen">
-            <span>Concerns</span>
-            <strong>Track</strong>
-          </button>
-          <button class="action-card" data-screen="aiScreen">
-            <span>AI Assistant</span>
-            <strong>Ask</strong>
-          </button>
-        </div>
 
         <section id="getAppCard" class="card get-app-card" aria-labelledby="getAppTitle">
           <div class="get-app-head">
@@ -304,7 +318,7 @@
 
       <main class="app-screen" id="billsScreen">
         <div class="header-row">
-          <button class="back-btn" data-screen="homeScreen">←</button>
+          <button class="back-btn" aria-label="Back" data-screen="homeScreen">←</button>
           <h2>My Bills</h2>
           <span></span>
         </div>
@@ -320,7 +334,7 @@
 
       <main class="app-screen" id="announcementsScreen">
         <div class="header-row">
-          <button class="back-btn" data-screen="homeScreen">←</button>
+          <button class="back-btn" aria-label="Back" data-screen="homeScreen">←</button>
           <h2>Announcements</h2>
           <span></span>
         </div>
@@ -330,7 +344,7 @@
 
       <main class="app-screen" id="complaintsScreen">
         <div class="header-row">
-          <button class="back-btn" data-screen="homeScreen">←</button>
+          <button class="back-btn" aria-label="Back" data-screen="homeScreen">←</button>
           <h2>Concerns</h2>
           <span class="tiny-action">New</span>
         </div>
@@ -363,7 +377,7 @@
 
       <main class="app-screen" id="aiScreen">
         <div class="header-row">
-          <button class="back-btn" data-screen="homeScreen">←</button>
+          <button class="back-btn" aria-label="Back" data-screen="homeScreen">←</button>
           <h2>AI Assistant</h2>
           <span></span>
         </div>
@@ -382,7 +396,7 @@
 
       <main class="app-screen" id="profileScreen">
         <div class="header-row">
-          <button class="back-btn" data-screen="homeScreen">←</button>
+          <button class="back-btn" aria-label="Back" data-screen="homeScreen">←</button>
           <h2>Profile</h2>
           <span></span>
         </div>
@@ -471,12 +485,22 @@
         <span class="ai-fab-label">Ask the AI assistant</span>
       </button>
 
-      <nav class="bottom-nav">
-        <button class="nav-item active" data-screen="homeScreen">Home</button>
-        <button class="nav-item" data-screen="billsScreen">Bills</button>
-        <button class="nav-item" data-screen="announcementsScreen">Alerts</button>
-        <button class="nav-item" data-screen="complaintsScreen">Concerns</button>
-        <button class="nav-item" data-screen="profileScreen">Profile</button>
+      <nav class="bottom-nav" aria-label="Main menu">
+        <button class="nav-item active" type="button" data-screen="homeScreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7M5 10v10h5v-6h4v6h5V10" /></svg><span>Home</span>
+        </button>
+        <button class="nav-item" type="button" data-screen="billsScreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /></svg><span>Bills</span>
+        </button>
+        <button class="nav-item" type="button" data-screen="announcementsScreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0" /></svg><span>Alerts</span>
+        </button>
+        <button class="nav-item" type="button" data-screen="complaintsScreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4zM8 9h8M8 12h5" /></svg><span>Concerns</span>
+        </button>
+        <button class="nav-item" type="button" data-screen="profileScreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" /></svg><span>Profile</span>
+        </button>
       </nav>
     </div>
 

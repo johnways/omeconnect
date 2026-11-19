@@ -99,6 +99,7 @@ function setScreen(screenId) {
   document.getElementById('aiFab').classList.toggle('hidden', signedOut || screenId === 'aiScreen');
 
   if (screenId === 'complaintsScreen' && typeof loadConcerns === 'function') void loadConcerns();
+  window.scrollTo({ top: 0 });
 }
 
 function renderDashboard() {
@@ -120,6 +121,11 @@ function renderAccountSummary() {
 
   document.getElementById('customerName').textContent =
     currentCustomer.fullName || 'Customer';
+  const hour = new Date().getHours();
+  document.getElementById('homeGreeting').textContent =
+    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('heroDueDate').textContent =
+    latestBill && latestBill.due_date ? `Due ${formatDate(latestBill.due_date)}` : 'No bill due';
   document.getElementById('accountLabel').textContent =
     appConfig.demoMode ? 'Demo account' : (account ? 'Verified account' : 'Not linked yet');
   const initials = (currentCustomer.fullName || 'Customer')

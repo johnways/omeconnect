@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OMECOnnect Admin</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="admin-theme.css" />
   </head>
   <body>
     <div id="app">
       <section id="loginScreen" class="screen active">
         <div class="login-card">
           <div class="brand-box">
-            <div class="brand-mark">OM</div>
+            <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z" /></svg></div>
             <div>
               <h1>OMECOnnect</h1>
-              <p>Admin Access</p>
+              <p>Admin Console · Authorized OMECO staff only</p>
             </div>
           </div>
 
@@ -61,23 +62,28 @@
               </div>
             </div>
             <button class="ghost-btn" type="button" data-export-report>Export Report</button>
-            <button id="logoutBtn" class="danger-btn" type="button">Logout</button>
+            <button id="logoutBtn" class="danger-btn" type="button">Sign out</button>
           </div>
         </header>
 
         <main class="dashboard-shell">
           <aside class="sidebar">
-            <div class="nav-title">Navigation</div>
+            <div class="side-brand">
+              <span class="side-logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z" /></svg></span>
+              <span><strong>OMECOnnect</strong><small>Admin Console</small></span>
+            </div>
+            <div class="nav-title">Menu</div>
             <nav>
-              <a class="nav-item active" href="#" data-view="overviewView">Overview</a>
-              <a class="nav-item" href="#" data-view="verificationView">Verification <span class="nav-badge hidden" id="navVerificationBadge">0</span></a>
-              <a class="nav-item" href="#" data-view="customersView">Customers</a>
-              <a class="nav-item" href="#" data-view="billsView">Bills</a>
-              <a class="nav-item" href="#" data-view="announcementsView">Announcements</a>
-              <a class="nav-item" href="#" data-view="complaintsView">Complaints <span class="nav-badge hidden" id="navComplaintBadge">0</span></a>
-              <a class="nav-item" href="#" data-view="reportsView">Reports</a>
-              <a class="nav-item" href="#" data-view="securityView">Security</a>
+              <a class="nav-item active" href="#" data-view="overviewView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" /></svg><span>Overview</span></a>
+              <a class="nav-item" href="#" data-view="verificationView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v6c0 4.4 3 8.1 7 9 4-.9 7-4.6 7-9V6zM9 12l2 2 4-4" /></svg><span>Verification</span> <span class="nav-badge hidden" id="navVerificationBadge">0</span></a>
+              <a class="nav-item" href="#" data-view="customersView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 7.5M18 14a6 6 0 0 1 4 7" /></svg><span>Customers</span></a>
+              <a class="nav-item" href="#" data-view="billsView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /></svg><span>Bills</span></a>
+              <a class="nav-item" href="#" data-view="announcementsView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" /></svg><span>Announcements</span></a>
+              <a class="nav-item" href="#" data-view="complaintsView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4zM8 9h8M8 12h5" /></svg><span>Complaints</span> <span class="nav-badge hidden" id="navComplaintBadge">0</span></a>
+              <a class="nav-item" href="#" data-view="reportsView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg><span>Reports</span></a>
+              <a class="nav-item" href="#" data-view="securityView"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11V8a6 6 0 1 1 12 0v3M5 11h14v10H5zM12 15v2" /></svg><span>Security</span></a>
             </nav>
+            <p class="side-foot">Occidental Mindoro Electric Cooperative, Inc.</p>
           </aside>
 
           <section class="content view" id="customersView">
