@@ -4,7 +4,7 @@
 | File | Purpose |
 |---|---|
 | `Dockerfile` | Builds a small, secure **nginx** web server image (runs as a non-root user) holding the chooser page, the customer app and the admin dashboard. |
-| `nginx/default.conf.template` | Web server settings: port **8080**, security headers (only the app's own scripts run, pages may only talk to Supabase, no framing), admin pages hidden from search engines, hidden files blocked, `/healthz` health check. |
+| `nginx/default.conf.template` | Web server settings: **two separate sites** — customer app on port **8080**, admin dashboard on port **8081** (this computer only); security headers (only the app's own scripts run, pages may only talk to Supabase, no framing), admin pages hidden from search engines, hidden files blocked, `/healthz` health check. |
 | `docker-compose.yml` | One command to build and start it, with automatic restart. |
 | `.dockerignore` | Keeps `docs`, `database`, `supabase`, `tools`, notes and secrets **out** of the image. |
 
@@ -68,10 +68,11 @@ You should see `✔ Container omeconnect-web  Started`.
 ```bash
 docker compose ps
 ```
-2. Open http://localhost:8080/ → the **Customer / OMECO Staff** chooser appears.
+2. Customer app: open http://localhost:8080/ → it goes straight to the customer sign-in. (The admin dashboard is **not** on this address.)
 3. Customer app: sign in with email, or **Continue with Google** – you should come back to
    `localhost:8080` signed in.
-4. Admin dashboard: http://localhost:8080/admin-dashboard/index.html → sign in with the admin account.
+4. Admin dashboard: open http://localhost:8081/ **on the computer that runs Docker** → sign in with the admin account.
+   Other phones and computers cannot open port 8081 (it is bound to 127.0.0.1 in `docker-compose.yml`).
 5. Health check: http://localhost:8080/healthz shows `ok`.
 6. Security headers (optional):
 ```bash
@@ -113,3 +114,19 @@ curl.exe -I http://localhost:8080/
 | Page loads but sign-in does nothing | Make sure you open it at `localhost:8080` (in Redirect URLs). Press Ctrl+F5 to reload without cache. |
 | Old version still shows after an edit | You forgot `--build`: run `docker compose up -d --build`, then Ctrl+F5. |
 | Using a different Supabase project | Change `SUPABASE_URL` in `docker-compose.yml` **and** `supabaseUrl` in both `config.js` files, then rebuild. |
+
+---
+
+## Customer and admin are separate (security)
+| Site | Address | Who can open it |
+|---|---|---|
+| Customer app | http://localhost:8080/ (or http://PC-IP:8080/ from a phone on the same Wi-Fi) | Anyone on the network |
+| Admin dashboard | http://localhost:8081/ | **Only the computer running Docker** |
+
+- The customer site contains no admin files at all (`/admin-dashboard` returns 404 there).
+- The admin site contains only the admin dashboard and is never listed by search engines.
+- Admins still have to sign in with an OMECO admin account; the database rules (RLS) check admin rights on every request.
+- To let one more office PC open the admin site, do **not** change `127.0.0.1:8081:8081` to `8081:8081` (that opens it to everyone on the network). Run Docker on that PC instead, or ask for an IP allow-list.
+
+Local preview without Docker (for development): `python tools/serve_local.py customer` (http://localhost:5500) and
+`python tools/serve_local.py admin` (http://localhost:5501). Both are this-computer-only and serve only their own files.

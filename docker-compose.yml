@@ -1,7 +1,8 @@
 # OMECOnnect – run the web app in Docker
 #
 #   Start (build if needed):   docker compose up -d --build
-#   Open in a browser:         http://localhost:8080/
+#   Customer app:              http://localhost:8080/
+#   Admin dashboard:           http://localhost:8081/   (this computer only)
 #   See status / health:       docker compose ps
 #   View logs:                 docker compose logs -f
 #   Stop:                      docker compose down
@@ -12,7 +13,10 @@ services:
     image: omeconnect-web:1.0
     container_name: omeconnect-web
     ports:
+      # Customer site: open to the network (phones on the same Wi-Fi can use it).
       - "8080:8080"
+      # Admin dashboard: bound to 127.0.0.1, so ONLY this computer can open it.
+      - "127.0.0.1:8081:8081"
     environment:
       # Your Supabase project URL (the pages may only talk to this address).
       SUPABASE_URL: https://qkhqrerexiikymnftlne.supabase.co

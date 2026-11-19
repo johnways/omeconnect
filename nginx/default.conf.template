@@ -1,32 +1,43 @@
-# OMECOnnect nginx site. Rendered at container start: ${SUPABASE_URL} is replaced
-# with the environment variable of the same name. Other $variables are nginx's own.
+# OMECOnnect nginx — TWO SEPARATE SITES in one container:
+#   port 8080  customer site   (/usr/share/nginx/customer) — no admin files at all
+#   port 8081  admin dashboard (/usr/share/nginx/admin)    — no customer app
+# docker-compose.yml publishes 8081 on 127.0.0.1 only, so the admin dashboard
+# can be opened only from the computer that runs Docker.
+# Rendered at container start: ${SUPABASE_URL} and ${SUPABASE_REALTIME_URL} are
+# replaced with environment variables; other $variables are nginx's own.
 
-# Keep admin pages out of search engines.
-map $uri $omeconnect_robots_tag {
-    ~^/admin-dashboard/  "noindex, nofollow";
-    default              "";
-}
-
+# ============================================================== CUSTOMER SITE
 server {
     listen 8080 default_server;
     server_name _;
 
-    root /usr/share/nginx/html;
+    root /usr/share/nginx/customer;
     index index.html;
     server_tokens off;
     charset utf-8;
-    # Folder redirects (e.g. /admin-dashboard -> /admin-dashboard/) keep whatever
-    # host and port the browser used, even if you map a port other than 8080.
+    # Folder redirects keep whatever host and port the browser used.
     absolute_redirect off;
 
-    # Security headers (same policy as the Netlify build): only this site's own
-    # scripts may run, and the pages may only talk to the Supabase project.
+    # Security headers: only this site's own scripts may run, and the pages may
+    # only talk to the Supabase project (https for data, wss for live updates).
     add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${SUPABASE_URL} ${SUPABASE_REALTIME_URL}; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-    add_header X-Robots-Tag $omeconnect_robots_tag always;
+
+    # The customer site opens straight to the customer app (no staff option here).
+    location = / {
+        return 302 /customer-mobile-app/index.html;
+    }
+    location = /index.html {
+        return 302 /customer-mobile-app/index.html;
+    }
+
+    # The admin dashboard is NOT on this site.
+    location ^~ /admin-dashboard {
+        return 404;
+    }
 
     # Always check for a newer version of the app files after a rebuild.
     location ~* \.(?:html|js|css)$ {
@@ -64,6 +75,50 @@ server {
     }
 
     # Never serve hidden files such as .env or .git.
+    location ~ /\. {
+        deny all;
+        return 404;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+
+# ============================================================== ADMIN SITE
+server {
+    listen 8081;
+    server_name _;
+
+    root /usr/share/nginx/admin;
+    index index.html;
+    server_tokens off;
+    charset utf-8;
+    absolute_redirect off;
+
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${SUPABASE_URL} ${SUPABASE_REALTIME_URL}; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    # Never let search engines list the admin site.
+    add_header X-Robots-Tag "noindex, nofollow" always;
+    add_header Cache-Control "no-store" always;
+
+    # The admin site opens straight to the admin sign-in.
+    location = / {
+        return 302 /admin-dashboard/index.html;
+    }
+    location = /index.html {
+        return 302 /admin-dashboard/index.html;
+    }
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
     location ~ /\. {
         deny all;
         return 404;

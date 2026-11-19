@@ -23,22 +23,26 @@ USER root
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
-# Only the app files (see .dockerignore): chooser page, customer app, admin dashboard.
-COPY index.html privacy.html terms.html offline.html manifest.webmanifest sw.js version.json /usr/share/nginx/html/
-COPY icons/ /usr/share/nginx/html/icons/
-COPY downloads/ /usr/share/nginx/html/downloads/
-COPY .well-known/ /usr/share/nginx/html/.well-known/
-COPY customer-mobile-app/ /usr/share/nginx/html/customer-mobile-app/
-COPY admin-dashboard/ /usr/share/nginx/html/admin-dashboard/
-RUN rm -f /usr/share/nginx/html/50x.html \
-          /usr/share/nginx/html/customer-mobile-app/config.example.js \
-          /usr/share/nginx/html/admin-dashboard/config.example.js \
- && chmod -R a+rX /usr/share/nginx/html
+# Two separate sites (see nginx/default.conf.template):
+#   customer site -> /usr/share/nginx/customer  (port 8080, NO admin files)
+#   admin site    -> /usr/share/nginx/admin     (port 8081, this computer only)
+COPY privacy.html terms.html offline.html manifest.webmanifest sw.js version.json /usr/share/nginx/customer/
+COPY icons/ /usr/share/nginx/customer/icons/
+COPY downloads/ /usr/share/nginx/customer/downloads/
+COPY .well-known/ /usr/share/nginx/customer/.well-known/
+COPY customer-mobile-app/ /usr/share/nginx/customer/customer-mobile-app/
+COPY admin-dashboard/ /usr/share/nginx/admin/admin-dashboard/
+COPY version.json /usr/share/nginx/admin/
+RUN rm -rf /usr/share/nginx/html \
+           /usr/share/nginx/customer/customer-mobile-app/config.example.js \
+           /usr/share/nginx/admin/admin-dashboard/config.example.js \
+ && chmod -R a+rX /usr/share/nginx/customer /usr/share/nginx/admin
 
 # Back to the unprivileged nginx user (uid 101).
 USER 101
 
-EXPOSE 8080
+# 8080 = customer site, 8081 = admin site
+EXPOSE 8080 8081
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz && wget -q -O /dev/null http://127.0.0.1:8081/healthz || exit 1

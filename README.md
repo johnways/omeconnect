@@ -47,4 +47,7 @@ Vercel publishes the new version automatically after each push.
 ```bash
 docker compose up -d --build
 ```
-Then open http://localhost:8080/ — see `docs/DOCKER_SETUP.md`.
+Customer app: http://localhost:8080/ · Admin dashboard: http://localhost:8081/ (this computer only) — see `docs/DOCKER_SETUP.md`.
+
+Without Docker (development): `python tools/serve_local.py customer` → http://localhost:5500 and
+`python tools/serve_local.py admin` → http://localhost:5501 (both this computer only).
