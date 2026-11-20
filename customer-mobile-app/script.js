@@ -550,7 +550,10 @@ async function refreshCustomerData() {
       .filter((n) => !n.created_at || Date.now() - new Date(n.created_at).getTime() < 5 * 60 * 1000)
       .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
     if (recent.length && window.OMECO_ALERTS && document.visibilityState === 'visible') {
-      window.OMECO_ALERTS.show(recent);
+      // When this phone gets real notifications, the phone itself rings; the
+      // in-app pop-up then stays quiet so the sound is not heard twice.
+      const phoneRings = pushSupported && Notification.permission === 'granted' && Boolean(savedPushEndpoint());
+      window.OMECO_ALERTS.show(recent, { sound: !phoneRings });
     }
   } catch (error) {
     // Session expired or offline: keep what is on screen.
@@ -805,12 +808,15 @@ async function subscribeThisPhone(report = () => {}) {
   if (!publicKey) throw new Error('Notifications are not set up on the server yet.');
   let subscription = await registration.pushManager.getSubscription();
   if (subscription) {
-    // Re-create it if it was made with a different key.
+    // Re-create it only if it was clearly made with a different key. (Some
+    // browsers, e.g. Samsung Internet, do not report the key: keep it then —
+    // re-creating it on every open kills the registration the server holds.)
     const current = subscription.options && subscription.options.applicationServerKey;
     const wanted = base64UrlToBytes(publicKey);
     const currentBytes = current ? new Uint8Array(current) : null;
-    const same = currentBytes && currentBytes.length === wanted.length && currentBytes.every((b, i) => b === wanted[i]);
-    if (!same) {
+    const different = currentBytes && currentBytes.length > 0 &&
+      !(currentBytes.length === wanted.length && currentBytes.every((b, i) => b === wanted[i]));
+    if (different) {
       await subscription.unsubscribe();
       subscription = null;
     }

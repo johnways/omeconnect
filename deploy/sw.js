@@ -2,7 +2,7 @@
 // The app always loads the newest version from the internet; nothing from the
 // app is stored for offline use. The only saved page is a small "No internet"
 // notice, shown if the app is opened without a connection.
-const CACHE = 'omeconnect-online-v5';
+const CACHE = 'omeconnect-online-v6';
 const OFFLINE_PAGE = '/offline.html';
 
 self.addEventListener('install', (event) => {
@@ -34,29 +34,23 @@ self.addEventListener('push', (event) => {
   }
   const title = data.title || 'OMECOnnect';
   const url = data.url || '/customer-mobile-app/index.html';
-  event.waitUntil((async () => {
-    // If the app is open on screen, it already shows its own pop-up with a
-    // chime, so the phone notification is added quietly (no double sound).
-    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const appOnScreen = windows.some((w) => w.visibilityState === 'visible' && w.url.includes(url.split('/index.html')[0]));
-    const options = {
+  // Always a full phone notification: sound + vibration, like any other app.
+  // (Some phones report the app as "on screen" even when it is in the
+  // background, so the notification is never made silent here. The app's own
+  // pop-up stays quiet on phones that get these notifications.)
+  event.waitUntil(
+    self.registration.showNotification(title, {
       body: data.body || 'You have a new update from OMECO.',
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       tag: data.tag || undefined,
+      renotify: Boolean(data.tag),
+      silent: false,
+      vibrate: [250, 120, 250, 120, 400],
       data: { url },
       timestamp: Date.now()
-    };
-    if (appOnScreen) {
-      options.silent = true;
-    } else {
-      // Phone sound + vibration, like any other app's notification.
-      options.silent = false;
-      options.renotify = Boolean(data.tag);
-      options.vibrate = [250, 120, 250, 120, 400];
-    }
-    await self.registration.showNotification(title, options);
-  })());
+    })
+  );
 });
 
 // Android sometimes renews a phone's push registration. Make the new one right
