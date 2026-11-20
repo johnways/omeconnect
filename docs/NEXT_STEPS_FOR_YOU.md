@@ -41,7 +41,7 @@ mailer, which only sends **a few emails per hour** and often lands in spam. With
 **Why:** anything typed in a chat is stored in its history.
 
 **a) Your admin password**
-1. Supabase → **Authentication → Users** → find `gonzalespangks07@gmail.com` → **⋮ → Send password recovery**
+1. Supabase → **Authentication → Users** → find the staff (admin) account's email → **⋮ → Send password recovery**
    (after step 1, the email arrives reliably), **or** sign in to the app and use **Forgot password?**.
 2. Choose a new password: 12+ characters, mixing words, numbers and symbols. Keep it in a password manager.
 

@@ -36,7 +36,7 @@ Backend: **Supabase** (Auth with email + Google, PostgreSQL with Row Level Secur
 | Site | Vercel project | Root Directory | Address |
 |---|---|---|---|
 | Public customer app | `omeconnect` | `deploy` | https://omeconnect.vercel.app |
-| Private admin dashboard | `omeco-staff-enwd3uiw` | `deploy-admin` | https://omeco-staff-enwd3uiw.vercel.app — **share only with OMECO staff** |
+| Private admin dashboard | (private project) | `deploy-admin` | private address — **shared only with OMECO staff** |
 
 The public site contains **no admin files** (`/admin-dashboard` is 404 there) and never links to the admin site.
 The admin site contains only the admin dashboard, is never indexed by search engines (`noindex`, `robots.txt Disallow: /`)
