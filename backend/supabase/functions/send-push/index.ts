@@ -1,6 +1,6 @@
 // OMECOnnect "send-push" Edge Function: sends a phone pop-up (Web Push) for a
 // new row in public.notifications. Called by the database trigger
-// push_on_new_notification (see database/phase13_push_notifications.sql) with
+// push_on_new_notification (see backend/database/migrations/phase13_push_notifications.sql) with
 // a shared secret from Supabase Vault. Deployed with verify_jwt = false
 // because the caller is the database, not a signed-in user.
 //

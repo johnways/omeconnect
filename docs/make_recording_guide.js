@@ -175,7 +175,7 @@ children.push(
     ['3', 'Accept a meter reading · rate a concern', 'Reading 13052 · 5 stars']
   ]),
   space(),
-  callout('Retakes:', 'If you must redo Part 2 or Part 3, run the “Reset between takes” block in database/demo_data_cleanup.sql (Supabase → SQL Editor) first. It puts the demo back exactly as described above.')
+  callout('Retakes:', 'If you must redo Part 2 or Part 3, run the “Reset between takes” block in backend/database/scripts/demo_data_cleanup.sql (Supabase → SQL Editor) first. It puts the demo back exactly as described above.')
 );
 
 // ---------------------------------------------------------------- 2. Setup
@@ -512,7 +512,7 @@ children.push(
     ['“Present reading is lower than the previous reading.”', 'You swapped the numbers. Previous 13037, Present 13210.'],
     ['Verification: “already linked to another customer”', 'Use another number, for example 05-0500-0002.'],
     ['Outages by area is empty', 'The report did not send. Go back to the customer Home and tap Report no power twice.'],
-    ['The December bill already exists (second take)', 'Run the “Reset between takes” block of database/demo_data_cleanup.sql, reload both windows.'],
+    ['The December bill already exists (second take)', 'Run the “Reset between takes” block of backend/database/scripts/demo_data_cleanup.sql, reload both windows.'],
     ['You made a mistake in speech', 'Pause 3 seconds, repeat the sentence. Cut the pause when editing.'],
     ['Phone size is lost', 'Open the undocked DevTools window again and press Ctrl + Shift + M.']
   ]),
@@ -528,7 +528,7 @@ children.push(
   ]),
   space(),
   h2('After recording — clean up the demo'),
-  tick('Open Supabase → **SQL Editor** → paste **database/demo_data_cleanup.sql** → **Run** (only when you no longer need the demo).'),
+  tick('Open Supabase → **SQL Editor** → paste **backend/database/scripts/demo_data_cleanup.sql** → **Run** (only when you no longer need the demo).'),
   tick('This removes the demo bills, payments, concerns, meter readings, advisories, the linked test account 05-0500-0001 and its request. Your sign-in and account 1234567890 are kept.')
 );
 const doc = new Document({

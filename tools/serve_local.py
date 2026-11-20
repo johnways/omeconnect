@@ -13,9 +13,7 @@ import http.server
 import posixpath
 import sys
 import urllib.parse
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent
+from site_layout import ROOT, resolve
 SITES = {
     "customer": {"port": 5500, "home": "/customer-mobile-app/index.html"},
     "admin": {"port": 5501, "home": "/admin-dashboard/index.html"},
@@ -56,6 +54,11 @@ def make_handler(site):
                 self._refuse()
                 return False
             return True
+
+        def translate_path(self, path):
+            # Web address -> source file in frontend/ (see tools/site_layout.py).
+            source = resolve(self._path())
+            return str(source) if source else str(ROOT / "__not_found__")
 
         def do_GET(self):
             if self._route():

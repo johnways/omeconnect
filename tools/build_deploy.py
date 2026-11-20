@@ -5,8 +5,9 @@
     deploy-admin/  PRIVATE admin site    (separate Vercel project, Root Directory = deploy-admin)
                    admin dashboard only; never indexed by search engines.
 
-The database/, docs/, supabase/, tools/ and android-signing/ folders are never
-included, so internal notes, SQL and keys never get published.
+Only frontend/ is published (see tools/site_layout.py for which source file
+becomes which web address). backend/, docs/, tools/ and android-signing/ are
+never included, so internal notes, SQL and keys never get published.
 
 Usage (from the project folder):
     python tools/build_deploy.py
@@ -16,12 +17,11 @@ import hashlib
 import json
 import shutil
 import sys
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from site_layout import APPS, PUBLIC, ROOT, app_files
+
 CUSTOMER_OUT = ROOT / "deploy"
 ADMIN_OUT = ROOT / "deploy-admin"
-SKIP_FILES = {"config.example.js"}
 
 # Kept True only while the new admin site is being set up, so staff are never
 # without a dashboard. Set to False once the admin site is live.
@@ -29,22 +29,22 @@ INCLUDE_ADMIN_IN_CUSTOMER_SITE = False
 
 
 def read_supabase_url() -> str:
-    config = (ROOT / "customer-mobile-app" / "config.js").read_text(encoding="utf-8")
+    config = (APPS["customer-mobile-app"] / "config.js").read_text(encoding="utf-8")
     for line in config.splitlines():
         if "supabaseUrl" in line and "https://" in line:
             return line.split("'")[1].rstrip("/")
-    sys.exit("Could not find supabaseUrl in customer-mobile-app/config.js")
+    sys.exit("Could not find supabaseUrl in frontend/customer-mobile-app/config.js")
 
 
-def copy_app(folder: str, out: Path) -> None:
-    target = out / folder
+def copy_app(app: str, out) -> None:
+    """Publishes one app at /<app>/: its own files plus frontend/shared/."""
+    target = out / app
     target.mkdir()
-    for path in (ROOT / folder).iterdir():
-        if path.is_file() and path.name not in SKIP_FILES:
-            shutil.copy2(path, target / path.name)
+    for name, path in app_files(app).items():
+        shutil.copy2(path, target / name)
 
 
-def write_version(out: Path) -> None:
+def write_version(out) -> None:
     """Fingerprint of the files; open apps reload themselves when it changes (live.js)."""
     digest = hashlib.sha256()
     for path in sorted(p for p in out.rglob("*") if p.is_file()):
@@ -53,7 +53,7 @@ def write_version(out: Path) -> None:
     (out / "version.json").write_text(json.dumps({"version": digest.hexdigest()[:16]}) + "\n", encoding="utf-8")
 
 
-def report(out: Path) -> None:
+def report(out) -> None:
     files = sorted(p.relative_to(out).as_posix() for p in out.rglob("*") if p.is_file())
     print(f"Built {out.name}/ with {len(files)} files:")
     for name in files:
@@ -83,10 +83,10 @@ def main() -> None:
         shutil.rmtree(out)
     out.mkdir()
     for page in ("privacy.html", "terms.html", "offline.html", "manifest.webmanifest", "sw.js"):
-        shutil.copy2(ROOT / page, out / page)
+        shutil.copy2(PUBLIC / page, out / page)
     for folder in ("icons", "downloads", ".well-known"):
-        if (ROOT / folder).is_dir():
-            shutil.copytree(ROOT / folder, out / folder)
+        if (PUBLIC / folder).is_dir():
+            shutil.copytree(PUBLIC / folder, out / folder)
     copy_app("customer-mobile-app", out)
     if INCLUDE_ADMIN_IN_CUSTOMER_SITE:
         copy_app("admin-dashboard", out)

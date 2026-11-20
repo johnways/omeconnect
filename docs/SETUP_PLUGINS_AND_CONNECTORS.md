@@ -119,16 +119,16 @@ supabase link --project-ref YOUR_PROJECT_REF
 
 ### C3. Apply your database (do this once)
 1. Open your Supabase project → **SQL Editor** → **New query**.
-2. Paste all of `database/supabase_schema.sql` → **Run**.
-3. New query → paste `database/phase2_supabase_auth_and_access.sql` → **Run**.
-4. New query → paste `database/phase3_function_privileges.sql` → **Run** (stops the
+2. Paste all of `backend/database/schema/supabase_schema.sql` → **Run**.
+3. New query → paste `backend/database/migrations/phase2_supabase_auth_and_access.sql` → **Run**.
+4. New query → paste `backend/database/migrations/phase3_function_privileges.sql` → **Run** (stops the
    internal functions from being called over the public API).
 
 > ✅ Steps 1–4 and the config.js step were already done by Claude on 2026-11-17 for the
 > project `Omeconnect_Mobile_Appllication`. Only repeat them for a new project.
 4. Go to **Project Settings → API**. Copy the **Project URL** and the **publishable/anon** key
-   (**never** the service_role key) into `customer-mobile-app/config.js` and
-   `admin-dashboard/config.js`, and set `demoMode: false`.
+   (**never** the service_role key) into `frontend/customer-mobile-app/config.js` and
+   `frontend/admin-dashboard/config.js`, and set `demoMode: false`.
 5. **Authentication → Providers → Email**: turn it on. Set the redirect URLs under **URL Configuration**.
 
 ### C4. Flutter SDK (only when you start the real mobile app)
@@ -152,8 +152,9 @@ flutter doctor --android-licenses
 
 ### C5. Useful VS Code extensions (optional)
 In VS Code press Ctrl+Shift+X and search for:
-- **Live Server** (Ritwick Dey): open `customer-mobile-app/index.html` over HTTP,
-  as your docs require. Right-click the file → *Open with Live Server*.
+- To preview the apps, use `python tools/serve_local.py customer` (http://localhost:5500) and
+  `python tools/serve_local.py admin` (http://localhost:5501). They put the shared files
+  (frontend/shared/) and the app files together, exactly like the live site.
 - **Supabase** (Supabase): browse tables and run SQL.
 - **PostgreSQL** (Microsoft): optional SQL editing.
 

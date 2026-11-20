@@ -3,9 +3,9 @@
 .git
 .vscode
 docs
-database
-supabase
+backend
 tools
+deploy-admin
 deploy
 backups
 *.md

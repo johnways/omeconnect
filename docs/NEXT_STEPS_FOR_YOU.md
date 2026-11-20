@@ -140,4 +140,4 @@ npx supabase db dump -f backup-schema.sql
 - Bills screen shows the real outstanding balance (it showed a fixed ₱4,280.00 before).
 - Customer notifications refresh every minute, can be tapped to mark as read, and "Mark all as read".
 - Logout always works, even with no internet.
-- 12 database indexes added (`database/phase11_performance_indexes.sql`) for speed as data grows.
+- 12 database indexes added (`backend/database/migrations/phase11_performance_indexes.sql`) for speed as data grows.

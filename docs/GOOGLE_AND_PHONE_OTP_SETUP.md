@@ -3,7 +3,7 @@
 **Already done (by Claude, 2026-11-17):**
 - Customer app has **Continue with Google**, and a **required SMS code (OTP) step** when creating an
   account or when an account has no verified mobile number. Codes expire after 5 minutes.
-- Database updated (`database/phase4_google_and_phone_auth.sql`, `phase5_phone_verification_required.sql`).
+- Database updated (`backend/database/migrations/phase4_google_and_phone_auth.sql`, `phase5_phone_verification_required.sql`).
 - The app checks whether each method is switched on, and shows "not set up yet" until you finish the steps below.
 
 > ✅ **Google sign-in is DONE and tested (2026-11-17).** Google Cloud project `omeconnect`,
@@ -84,7 +84,7 @@ Supabase callback URL (you'll paste this in Google): **`https://qkhqrerexiikymnf
 4. Leave *Skip nonce checks* **off** → **Save**.
 
 ### 1E. Test it
-1. In VS Code, right-click `customer-mobile-app/index.html` → **Open with Live Server**.
+1. Run `python tools/serve_local.py customer` and open http://localhost:5500.
    It must be served over http(s); opening the file directly won't work.
 2. Click **Continue with Google** → pick a test Gmail account → **Continue**.
 3. You should come back to the app, signed in, with your Google name shown.
@@ -158,7 +158,7 @@ Supabase → **Edge Functions → Secrets** (or *Project Settings → Edge Funct
 Click **Save**. No redeploy needed. Then tell Claude **"textbee ready"** and it will run the real test with your number.
 
 ### 2D. Test it
-1. Open the app (VS Code Live Server, or `python -m http.server 5500` in the project folder) → **Create account**
+1. Open the app (`python tools/serve_local.py customer` → http://localhost:5500) → **Create account**
    → fill in the form with your real number → **Continue**.
 2. Your Android phone sends a text like *"OMECOnnect code: 123456. Valid for 5 minutes…"* to the number.
 3. Enter it → **Verify** → *"Mobile number verified and account created…"*. Open the email link, then sign in.
@@ -187,7 +187,7 @@ Built and tested by Claude (2026-11-17). Nothing to set up. Supabase includes it
 - **Profile → Two-step verification → Set up authenticator app** → scan the QR with Google
   Authenticator / Microsoft Authenticator → enter the 6-digit code → **On**.
 - After that, every sign-in asks for the app's current code (screen "Two-step check").
-- The **database enforces it** (`database/phase6_authenticator_app_2fa.sql`): a session that skipped the
+- The **database enforces it** (`backend/database/migrations/phase6_authenticator_app_2fa.sql`): a session that skipped the
   code cannot read that customer's data, even if someone bypasses the app.
 - Turn off: Profile → **Turn off two-step verification**.
 - **Lost phone?** An admin can remove the factor in Supabase → Authentication → Users → the user → *MFA factors* → delete.

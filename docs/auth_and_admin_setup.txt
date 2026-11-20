@@ -8,9 +8,9 @@ Demo admin login:
 - Password: admin123
 
 Files created:
-- admin-dashboard/index.html
-- admin-dashboard/styles.css
-- admin-dashboard/script.js
+- frontend/admin-dashboard/index.html
+- frontend/admin-dashboard/styles.css
+- frontend/admin-dashboard/script.js
 
 What this starter simulates:
 - admin login screen

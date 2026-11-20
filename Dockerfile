@@ -26,13 +26,17 @@ COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 # Two separate sites (see nginx/default.conf.template):
 #   customer site -> /usr/share/nginx/customer  (port 8080, NO admin files)
 #   admin site    -> /usr/share/nginx/admin     (port 8081, this computer only)
-COPY privacy.html terms.html offline.html manifest.webmanifest sw.js version.json /usr/share/nginx/customer/
-COPY icons/ /usr/share/nginx/customer/icons/
-COPY downloads/ /usr/share/nginx/customer/downloads/
-COPY .well-known/ /usr/share/nginx/customer/.well-known/
-COPY customer-mobile-app/ /usr/share/nginx/customer/customer-mobile-app/
-COPY admin-dashboard/ /usr/share/nginx/admin/admin-dashboard/
-COPY version.json /usr/share/nginx/admin/
+# Source folders (frontend/) -> same web addresses as the live site.
+COPY frontend/public/privacy.html frontend/public/terms.html frontend/public/offline.html      frontend/public/manifest.webmanifest frontend/public/sw.js frontend/public/version.json      /usr/share/nginx/customer/
+COPY frontend/public/icons/ /usr/share/nginx/customer/icons/
+COPY frontend/public/downloads/ /usr/share/nginx/customer/downloads/
+COPY frontend/public/.well-known/ /usr/share/nginx/customer/.well-known/
+# Each app = the shared files (live.js, theme.js, statement.*) + its own files.
+COPY frontend/shared/ /usr/share/nginx/customer/customer-mobile-app/
+COPY frontend/customer-mobile-app/ /usr/share/nginx/customer/customer-mobile-app/
+COPY frontend/shared/ /usr/share/nginx/admin/admin-dashboard/
+COPY frontend/admin-dashboard/ /usr/share/nginx/admin/admin-dashboard/
+COPY frontend/public/version.json /usr/share/nginx/admin/
 RUN rm -rf /usr/share/nginx/html \
            /usr/share/nginx/customer/customer-mobile-app/config.example.js \
            /usr/share/nginx/admin/admin-dashboard/config.example.js \

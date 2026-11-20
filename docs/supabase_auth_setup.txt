@@ -4,7 +4,7 @@ The customer starter now uses Supabase Auth and PostgREST when configured. Until
 
 1. Create a Supabase project and open Project Settings > API.
 
-2. In customer-mobile-app/config.js set:
+2. In frontend/customer-mobile-app/config.js set:
 
 window.OMECO_CONFIG = {
   demoMode: false,
@@ -16,8 +16,8 @@ window.OMECO_CONFIG = {
 Use the project URL and the publishable (or legacy anon) key only. Never place the service_role/secret key in a browser, mobile app, or source control. The public key is safe to ship only with the RLS migration below applied.
 
 3. In the Supabase SQL Editor, run these scripts in order:
-- database/supabase_schema.sql
-- database/phase2_supabase_auth_and_access.sql
+- backend/database/schema/supabase_schema.sql
+- backend/database/migrations/phase2_supabase_auth_and_access.sql
 
 The migration:
 - Creates a public profile row for new Supabase Auth users
@@ -63,8 +63,8 @@ SELECT cron.schedule(
 If pg_cron is unavailable on your plan, run this function from a trusted scheduled server/Edge Function using a server-side credential. Never expose a service-role key to the app.
 
 8. Run the local customer screen:
-- Serve the workspace over HTTP(S), then open customer-mobile-app/index.html.
-- The current customer-mobile-app/config.js is set to demoMode: true for local testing.
+- Run python tools/serve_local.py customer, then open http://localhost:5500.
+- The current frontend/customer-mobile-app/config.js is set to demoMode: true for local testing.
 - Demo login: demo.customer@omeco.test / DemoCustomer123!
 - Demo records are fabricated and must never be treated as official OMECO information.
 - Before connecting to Supabase, set demoMode to false and enter the project's URL and public key.

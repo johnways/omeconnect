@@ -23,32 +23,41 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: JavaScript syntax (customer app, admin console)
+      - name: JavaScript syntax (front end and back end helpers)
         run: |
           set -e
-          for f in customer-mobile-app/*.js admin-dashboard/*.js sw.js; do
+          for f in frontend/customer-mobile-app/*.js frontend/admin-dashboard/*.js frontend/shared/*.js frontend/public/sw.js tools/*.js; do
+            [ -e "$f" ] || continue
             echo "checking $f"
             node --check "$f"
           done
 
-      - name: Shared files are identical in both apps
+      - name: Shared files live only in frontend/shared (one copy for both apps)
         run: |
-          cmp customer-mobile-app/live.js admin-dashboard/live.js
-          cmp customer-mobile-app/theme.js admin-dashboard/theme.js
-          cmp customer-mobile-app/statement.js admin-dashboard/statement.js
-          cmp customer-mobile-app/statement.css admin-dashboard/statement.css
+          set -e
+          for f in frontend/shared/*; do
+            name=$(basename "$f")
+            for app in frontend/customer-mobile-app frontend/admin-dashboard; do
+              if [ -e "$app/$name" ]; then echo "$app/$name duplicates frontend/shared/$name"; exit 1; fi
+            done
+          done
+          echo "No duplicated shared files." 
 
       - name: Every script and stylesheet referenced by the pages exists
         run: |
           python - <<'PY'
           import re, pathlib, sys
           bad = []
-          for page in ["customer-mobile-app/index.html", "admin-dashboard/index.html"]:
+          shared = pathlib.Path("frontend/shared")
+          for page in ["frontend/customer-mobile-app/index.html", "frontend/admin-dashboard/index.html"]:
               html = pathlib.Path(page).read_text(encoding="utf-8")
               folder = pathlib.Path(page).parent
               for ref in re.findall(r'(?:src|href)="([^"#:?]+\.(?:js|css))"', html):
-                  target = (pathlib.Path(".") / ref.lstrip("/")) if ref.startswith("/") else folder / ref
-                  if not target.exists():
+                  if ref.startswith("/"):
+                      found = (pathlib.Path("frontend/public") / ref.lstrip("/")).exists()
+                  else:
+                      found = (folder / ref).exists() or (shared / ref).exists()
+                  if not found:
                       bad.append(f"{page}: {ref}")
           if bad:
               print("Missing files:", *bad, sep="\n  ")
@@ -61,10 +70,10 @@ jobs:
           python - <<'PY'
           import re, pathlib, sys
           missing = []
-          for app in ["customer-mobile-app", "admin-dashboard"]:
+          for app in ["frontend/customer-mobile-app", "frontend/admin-dashboard"]:
               html = pathlib.Path(app, "index.html").read_text(encoding="utf-8")
               ids = set(re.findall(r'id="([^"]+)"', html))
-              for js in pathlib.Path(app).glob("*.js"):
+              for js in [*pathlib.Path(app).glob("*.js"), *pathlib.Path("frontend/shared").glob("*.js")]:
                   src = js.read_text(encoding="utf-8")
                   # $('id') and document.getElementById('id') with a literal id
                   for ref in re.findall(r"(?:getElementById|\$)\('([A-Za-z][\w-]*)'\)", src):
