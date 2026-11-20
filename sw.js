@@ -2,7 +2,7 @@
 // The app always loads the newest version from the internet; nothing from the
 // app is stored for offline use. The only saved page is a small "No internet"
 // notice, shown if the app is opened without a connection.
-const CACHE = 'omeconnect-online-v3';
+const CACHE = 'omeconnect-online-v4';
 const OFFLINE_PAGE = '/offline.html';
 
 self.addEventListener('install', (event) => {
@@ -33,17 +33,30 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' };
   }
   const title = data.title || 'OMECOnnect';
-  event.waitUntil(
-    self.registration.showNotification(title, {
+  const url = data.url || '/customer-mobile-app/index.html';
+  event.waitUntil((async () => {
+    // If the app is open on screen, it already shows its own pop-up with a
+    // chime, so the phone notification is added quietly (no double sound).
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const appOnScreen = windows.some((w) => w.visibilityState === 'visible' && w.url.includes(url.split('/index.html')[0]));
+    const options = {
       body: data.body || 'You have a new update from OMECO.',
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',
       tag: data.tag || undefined,
-      renotify: Boolean(data.tag),
-      data: { url: data.url || '/customer-mobile-app/index.html' },
-      vibrate: [200, 100, 200]
-    })
-  );
+      data: { url },
+      timestamp: Date.now()
+    };
+    if (appOnScreen) {
+      options.silent = true;
+    } else {
+      // Phone sound + vibration, like any other app's notification.
+      options.silent = false;
+      options.renotify = Boolean(data.tag);
+      options.vibrate = [250, 120, 250, 120, 400];
+    }
+    await self.registration.showNotification(title, options);
+  })());
 });
 
 // Tapping the pop-up opens (or focuses) the app.

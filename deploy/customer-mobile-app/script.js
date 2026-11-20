@@ -545,7 +545,13 @@ async function refreshCustomerData() {
     renderAnnouncements();
     renderNotifications();
     if (window.OMECO_FEATURES) window.OMECO_FEATURES.onRefresh();
-    if (fresh.length) setMessage(`🔔 ${fresh[0].title}: ${fresh[0].message}`, 'success');
+    // Pop up only what just arrived (not old unread items found on reopening).
+    const recent = fresh
+      .filter((n) => !n.created_at || Date.now() - new Date(n.created_at).getTime() < 5 * 60 * 1000)
+      .sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    if (recent.length && window.OMECO_ALERTS && document.visibilityState === 'visible') {
+      window.OMECO_ALERTS.show(recent);
+    }
   } catch (error) {
     // Session expired or offline: keep what is on screen.
     console.warn('Refresh failed:', error.message);
@@ -790,6 +796,87 @@ async function sendTestPopUp() {
   }
 }
 
+// Registers this phone for pop-ups (permission must already be granted).
+async function subscribeThisPhone(report = () => {}) {
+  report('Step 2 of 3: registering this phone…');
+  const registration = await navigator.serviceWorker.register('/sw.js');
+  await navigator.serviceWorker.ready;
+  const publicKey = await supabaseClient.getPushPublicKey();
+  if (!publicKey) throw new Error('Notifications are not set up on the server yet.');
+  let subscription = await registration.pushManager.getSubscription();
+  if (subscription) {
+    // Re-create it if it was made with a different key.
+    const current = subscription.options && subscription.options.applicationServerKey;
+    const wanted = base64UrlToBytes(publicKey);
+    const currentBytes = current ? new Uint8Array(current) : null;
+    const same = currentBytes && currentBytes.length === wanted.length && currentBytes.every((b, i) => b === wanted[i]);
+    if (!same) {
+      await subscription.unsubscribe();
+      subscription = null;
+    }
+  }
+  if (!subscription) {
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: base64UrlToBytes(publicKey)
+    });
+  }
+  report('Step 3 of 3: linking this phone to your account…');
+  await supabaseClient.savePushSubscription(currentSession.access_token, subscription);
+  return subscription;
+}
+
+// Notifications are on by default: right after sign-in the app asks the phone
+// once. The installed Android app shows the system "Allow notifications?"
+// dialog straight away; a browser tab asks on the customer's first tap
+// (browsers only allow that question after a tap).
+const AUTO_ASK_KEY = 'omeconnect.pushAsked';
+let autoAskArmed = false;
+
+function askedRecently() {
+  try { return Date.now() - Number(localStorage.getItem(AUTO_ASK_KEY) || 0) < 24 * 60 * 60 * 1000; } catch { return false; }
+}
+
+async function autoAskForNotifications() {
+  if (!currentSession || !pushSupported || Notification.permission !== 'default') return 'skip';
+  try { localStorage.setItem(AUTO_ASK_KEY, String(Date.now())); } catch { /* ignore */ }
+  let permission = 'default';
+  try { permission = await Notification.requestPermission(); } catch { /* ignore */ }
+  if (permission === 'granted' && currentSession) {
+    try {
+      await subscribeThisPhone();
+      setMessage('🔔 Notifications are on. Your phone will ring for new bills, outages and replies.', 'success');
+    } catch (error) {
+      console.warn('Could not turn on notifications:', error.message);
+    }
+  }
+  void renderPushControls();
+  return permission;
+}
+
+function armAutoAsk() {
+  if (autoAskArmed || !pushSupported || Notification.permission !== 'default' || askedRecently()) return;
+  autoAskArmed = true;
+  const onFirstTap = () => {
+    window.removeEventListener('pointerup', onFirstTap, true);
+    autoAskArmed = false;
+    void autoAskForNotifications();
+  };
+  if (openedFromHomeScreen) {
+    // Installed app: ask now; if the phone wants a tap first, ask on the first tap.
+    void autoAskForNotifications().then((result) => {
+      if (result === 'default' && currentSession) {
+        try { localStorage.removeItem(AUTO_ASK_KEY); } catch { /* ignore */ }
+        window.addEventListener('pointerup', onFirstTap, true);
+      } else {
+        autoAskArmed = false;
+      }
+    });
+  } else {
+    window.addEventListener('pointerup', onFirstTap, true);
+  }
+}
+
 async function turnOnPhoneNotifications() {
   if (!currentSession) return;
   if (!pushSupported) {
@@ -806,31 +893,7 @@ async function turnOnPhoneNotifications() {
         : 'You did not allow notifications. Tap "Turn on notifications" again and choose Allow.', 'error');
       return;
     }
-    showPushStatus('Step 2 of 3: registering this phone…');
-    const registration = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-    const publicKey = await supabaseClient.getPushPublicKey();
-    if (!publicKey) throw new Error('Notifications are not set up on the server yet.');
-    let subscription = await registration.pushManager.getSubscription();
-    if (subscription) {
-      // Re-create it if it was made with a different key.
-      const current = subscription.options && subscription.options.applicationServerKey;
-      const wanted = base64UrlToBytes(publicKey);
-      const currentBytes = current ? new Uint8Array(current) : null;
-      const same = currentBytes && currentBytes.length === wanted.length && currentBytes.every((b, i) => b === wanted[i]);
-      if (!same) {
-        await subscription.unsubscribe();
-        subscription = null;
-      }
-    }
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: base64UrlToBytes(publicKey)
-      });
-    }
-    showPushStatus('Step 3 of 3: linking this phone to your account…');
-    await supabaseClient.savePushSubscription(currentSession.access_token, subscription);
+    await subscribeThisPhone(showPushStatus);
     pushJustEnabled = true;
     await renderPushControls();
     await sendTestPopUp();
@@ -857,9 +920,14 @@ async function syncPhoneNotifications() {
   pushJustEnabled = false;
   showPushStatus('');
   try {
-    if (pushSupported && Notification.permission === 'granted' && currentSession) {
-      const subscription = await getThisPhonesSubscription();
-      if (subscription) await supabaseClient.savePushSubscription(currentSession.access_token, subscription);
+    if (pushSupported && currentSession && !appConfig.demoMode) {
+      if (Notification.permission === 'granted') {
+        // Allowed before (or by the Android app at install): make sure this
+        // phone is registered and linked to this customer — no button needed.
+        await subscribeThisPhone();
+      } else if (Notification.permission === 'default') {
+        armAutoAsk();
+      }
     }
   } catch (error) {
     console.warn('Could not link notifications to this account:', error.message);
