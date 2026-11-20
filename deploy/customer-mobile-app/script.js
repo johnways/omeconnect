@@ -844,8 +844,8 @@ async function autoAskForNotifications() {
   try { permission = await Notification.requestPermission(); } catch { /* ignore */ }
   if (permission === 'granted' && currentSession) {
     try {
+      // No banner: once allowed, notifications simply work (keeps the screen clean).
       await subscribeThisPhone();
-      setMessage('🔔 Notifications are on. Your phone will ring for new bills, outages and replies.', 'success');
     } catch (error) {
       console.warn('Could not turn on notifications:', error.message);
     }
