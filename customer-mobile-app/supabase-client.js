@@ -164,6 +164,13 @@
       });
     },
 
+    // Does the server still have this phone's pop-up registration?
+    async hasPushSubscription(accessToken, endpoint) {
+      return request(`${getBaseUrl()}/rest/v1/rpc/has_push_subscription`, {
+        method: 'POST', headers: authHeaders(accessToken), body: JSON.stringify({ p_endpoint: endpoint })
+      });
+    },
+
     async removePushSubscription(accessToken, endpoint) {
       return request(`${getBaseUrl()}/rest/v1/rpc/remove_push_subscription`, {
         method: 'POST', headers: authHeaders(accessToken), body: JSON.stringify({ p_endpoint: endpoint })

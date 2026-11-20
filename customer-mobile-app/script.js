@@ -815,6 +815,15 @@ async function subscribeThisPhone(report = () => {}) {
       subscription = null;
     }
   }
+  if (subscription && savedPushEndpoint() === subscription.endpoint) {
+    // This phone was registered before. If the server has since dropped it
+    // (Google said it expired), throw it away and make a fresh one.
+    const known = await supabaseClient.hasPushSubscription(currentSession.access_token, subscription.endpoint).catch(() => true);
+    if (known === false) {
+      await subscription.unsubscribe().catch(() => {});
+      subscription = null;
+    }
+  }
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
@@ -823,8 +832,26 @@ async function subscribeThisPhone(report = () => {}) {
   }
   report('Step 3 of 3: linking this phone to your account…');
   await supabaseClient.savePushSubscription(currentSession.access_token, subscription);
+  try { localStorage.setItem(PUSH_ENDPOINT_KEY, subscription.endpoint); } catch { /* ignore */ }
+  lastPushCheck = Date.now();
   return subscription;
 }
+
+const PUSH_ENDPOINT_KEY = 'omeconnect.pushEndpoint';
+let lastPushCheck = 0;
+function savedPushEndpoint() {
+  try { return localStorage.getItem(PUSH_ENDPOINT_KEY); } catch { return null; }
+}
+
+// Each time the app comes back to the front (at most every 10 minutes), make
+// sure this phone is still registered, so pop-ups never silently stop.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !currentSession || appConfig.demoMode) return;
+  if (!pushSupported || Notification.permission !== 'granted') return;
+  if (Date.now() - lastPushCheck < 10 * 60 * 1000) return;
+  lastPushCheck = Date.now();
+  subscribeThisPhone().then(() => renderPushControls()).catch((error) => console.warn('Pop-up check failed:', error.message));
+});
 
 // Notifications are on by default: right after sign-in the app asks the phone
 // once. The installed Android app shows the system "Allow notifications?"
@@ -913,6 +940,7 @@ async function turnOffPhoneNotifications(accessToken) {
   if (!subscription) return;
   if (accessToken) await supabaseClient.removePushSubscription(accessToken, subscription.endpoint).catch(() => {});
   await subscription.unsubscribe().catch(() => {});
+  try { localStorage.removeItem(PUSH_ENDPOINT_KEY); } catch { /* ignore */ }
 }
 
 // After sign-in: if this phone already allows notifications, link it to this customer.

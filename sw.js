@@ -2,7 +2,7 @@
 // The app always loads the newest version from the internet; nothing from the
 // app is stored for offline use. The only saved page is a small "No internet"
 // notice, shown if the app is opened without a connection.
-const CACHE = 'omeconnect-online-v4';
+const CACHE = 'omeconnect-online-v5';
 const OFFLINE_PAGE = '/offline.html';
 
 self.addEventListener('install', (event) => {
@@ -57,6 +57,17 @@ self.addEventListener('push', (event) => {
     }
     await self.registration.showNotification(title, options);
   })());
+});
+
+// Android sometimes renews a phone's push registration. Make the new one right
+// away; the app links it to the customer the next time it is opened.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  const options = event.oldSubscription && event.oldSubscription.options;
+  if (!options || !options.applicationServerKey) return;
+  event.waitUntil(
+    self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: options.applicationServerKey })
+      .catch(() => {})
+  );
 });
 
 // Tapping the pop-up opens (or focuses) the app.
