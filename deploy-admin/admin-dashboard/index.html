@@ -8,6 +8,7 @@
     <script src="theme.js"></script>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="admin-theme.css" />
+    <link rel="stylesheet" href="statement.css" />
   </head>
   <body>
     <div id="app">
@@ -440,6 +441,31 @@
                     <input id="billKwh" type="number" min="0" step="0.01" />
                   </label>
                 </div>
+                <details class="charges-box" open>
+                  <summary>Meter reading &amp; statement details</summary>
+                  <div class="form-grid">
+                    <label>Previous reading<input id="billPrev" type="number" min="0" step="0.1" /></label>
+                    <label>Present reading<input id="billPresent" type="number" min="0" step="0.1" /></label>
+                    <label>Multiplier<input id="billMult" type="number" min="1" step="1" value="1" /></label>
+                    <label>Reading date<input id="billReadingDate" type="date" /></label>
+                    <label>Period from<input id="billFrom" type="date" /></label>
+                    <label>Period to<input id="billTo" type="date" /></label>
+                    <label>Cut-off date<input id="billCutoff" type="date" /></label>
+                    <label>Customer type
+                      <select id="billClass">
+                        <option value="residential">Residential (R)</option>
+                        <option value="commercial">Commercial (C)</option>
+                        <option value="industrial">Industrial (I)</option>
+                        <option value="public_building">Public building (P)</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="calc-row">
+                    <button type="button" class="light-btn" id="billCalc">Calculate from rate schedule</button>
+                    <span id="billCalcNote" class="muted small">Fills kWh and amount from the readings and the current rates.</span>
+                  </div>
+                  <div id="billCalcLines" class="calc-lines hidden"></div>
+                </details>
                 <details class="charges-box">
                   <summary>Charge breakdown (optional, shown to the customer)</summary>
                   <div class="form-grid" id="chargeFields">
@@ -499,19 +525,25 @@
                     <input id="rateEffective" type="date" required />
                   </label>
                 </div>
-                <details class="charges-box">
-                  <summary>Breakdown per kWh (optional, shown to customers)</summary>
-                  <div class="form-grid" id="rateComponents">
-                    <label>Generation<input data-rate="generation" type="number" step="0.0001" /></label>
-                    <label>Transmission<input data-rate="transmission" type="number" step="0.0001" /></label>
-                    <label>System loss<input data-rate="system_loss" type="number" step="0.0001" /></label>
-                    <label>Distribution<input data-rate="distribution" type="number" step="0.0001" /></label>
-                    <label>Supply &amp; metering<input data-rate="supply" type="number" step="0.0001" /></label>
-                    <label>Universal charges<input data-rate="universal" type="number" step="0.0001" /></label>
-                    <label>Subsidies / lifeline<input data-rate="subsidies" type="number" step="0.0001" /></label>
-                    <label>Taxes (VAT, local)<input data-rate="taxes" type="number" step="0.0001" /></label>
+                <details class="charges-box" open>
+                  <summary>Full rate schedule (as printed on the statement)</summary>
+                  <p class="muted small">Each line is charged per kWh, per month, or as a % of another group (e.g. VAT on Distribution = 0.12 of DISTRIBUTION). When filled, it replaces the rate and fixed charge above. Lines without a rate are skipped.</p>
+                  <div class="sched-tools">
+                    <button type="button" class="light-btn" id="schedTemplate">Load OMECO statement lines</button>
+                    <button type="button" class="light-btn" id="schedAdd">+ Add line</button>
+                    <label class="sched-surcharge">Late surcharge (%)<input id="rateSurcharge" type="number" min="0" max="50" step="0.01" value="5" /></label>
                   </div>
-                  <p id="rateComponentSum" class="muted small"></p>
+                  <div class="table-wrap">
+                    <table class="sched-table">
+                      <thead><tr><th>Group</th><th>Charge</th><th>Rate</th><th>Per</th><th>Of group</th><th></th></tr></thead>
+                      <tbody id="schedRows"></tbody>
+                    </table>
+                  </div>
+                  <p id="schedSummary" class="muted small"></p>
+                  <div class="sched-preview">
+                    <label>Preview for<input id="schedPreviewKwh" type="number" min="0" step="1" value="100" /> kWh</label>
+                    <strong id="schedPreviewTotal"></strong>
+                  </div>
                 </details>
                 <label>Note (optional)
                   <input id="rateNote" type="text" maxlength="300" placeholder="e.g. ERC-approved rate for December 2026" />
@@ -520,6 +552,20 @@
                   <button type="submit" class="primary-btn" id="rateSave">Save rate</button>
                 </div>
               </form>
+              <details class="rate-history-box supervisor-only hidden" id="headerBox">
+                <summary>Statement header (shown at the top of every online statement)</summary>
+                <form id="headerForm" class="form-panel header-form" novalidate>
+                  <div class="form-grid">
+                    <label>Cooperative name<input id="hdrName" maxlength="120" /></label>
+                    <label>Short name (logo)<input id="hdrShort" maxlength="12" /></label>
+                    <label>Address<input id="hdrAddress" maxlength="120" /></label>
+                    <label>VAT REG TIN<input id="hdrTin" maxlength="40" placeholder="as registered with BIR" /></label>
+                    <label>Hotline<input id="hdrHotline" maxlength="60" /></label>
+                  </div>
+                  <label>Footer note<textarea id="hdrFooter" rows="2" maxlength="400"></textarea></label>
+                  <div class="form-actions"><button type="submit" class="primary-btn">Save header</button></div>
+                </form>
+              </details>
               <details class="rate-history-box">
                 <summary>Rate history</summary>
                 <div class="table-wrap">
@@ -710,6 +756,7 @@
     <div id="toastHost" class="toast-host" aria-live="polite"></div>
 
     <script src="script.js"></script>
+    <script src="statement.js"></script>
     <script src="admin-ops.js"></script>
     <script src="admin-features.js"></script>
   </body>

@@ -733,6 +733,8 @@
       const markPaid = el('button', { type: 'button', class: 'btn-sm' }, 'Mark paid');
       markPaid.disabled = paid;
       markPaid.addEventListener('click', () => void markBillPaid(b));
+      const receipt = el('button', { type: 'button', class: 'btn-sm' }, 'Statement');
+      receipt.addEventListener('click', () => window.adminFeatures && window.adminFeatures.showStatement(b.id));
       return el('tr', {},
         el('td', {}, el('strong', { class: 'mono' }, (b.customer_accounts && b.customer_accounts.account_number) || '—'),
           el('span', { class: 'cell-sub' }, (b.customer_accounts && b.customer_accounts.users && b.customer_accounts.users.full_name) || '')),
@@ -741,7 +743,7 @@
         el('td', { class: 'mono' }, peso(b.total_amount),
           el('span', { class: 'cell-sub' }, b.consumption_kwh ? `${b.consumption_kwh} kWh` : '')),
         el('td', {}, paid ? badge('Paid', 'approved') : badge('Unpaid', 'pending')),
-        el('td', {}, el('div', { class: 'row-actions' }, markPaid)));
+        el('td', {}, el('div', { class: 'row-actions' }, receipt, markPaid)));
     }), 'No bills yet.');
   }
 
@@ -767,9 +769,11 @@
         outstanding_balance: amount,
         consumption_kwh: $('billKwh').value ? Number($('billKwh').value) : null,
         charges: window.adminFeatures ? window.adminFeatures.readCharges() : null,
-        status: 'unpaid'
+        status: 'unpaid',
+        ...(window.adminFeatures ? window.adminFeatures.readBillDetails(amount) : {})
       }, token());
       $('billForm').reset();
+      if (window.adminFeatures) window.adminFeatures.resetBillDetails();
       toast('Bill added. The customer has been notified.', 'success');
       await showBills();
     } catch (error) {

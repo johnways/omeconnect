@@ -298,9 +298,34 @@
           el('tr', {}, el('td', { text: CHARGE_LABELS[k] || k.replace(/_/g, ' ') }), el('td', { class: 'num', text: formatCurrency(v) })))))) : null,
       compare ? el('div', { class: `bill-compare ${compare.kind}` }, el('strong', { text: compare.text }), compare.tip ? el('p', { text: compare.tip }) : null) : null,
       el('div', { class: 'sheet-actions' }, payBtn,
-        el('button', { type: 'button', class: 'secondary-btn', onclick: () => printBill(bill, rows, charges) }, 'Print / Save as PDF'))
+        el('button', { type: 'button', class: 'primary-btn', onclick: () => openStatement(bill) }, 'View statement (receipt)'),
+        el('button', { type: 'button', class: 'secondary-btn', onclick: () => printBill(bill, rows, charges) }, 'Print short summary'))
     ];
     openSheet(`${bill.billing_month || 'Bill'} details`, content);
+  }
+
+  // Online Statement of Account (looks like the printed OMECO bill).
+  async function openStatement(bill) {
+    if (!signedIn() || !window.OMECO_STATEMENT) return;
+    const holder = el('div', { class: 'soa-viewer' }, el('p', { class: 'soa-loading', text: 'Loading your statement…' }));
+    openSheet(`Statement · ${bill.billing_month || ''}`, [holder], { wide: true });
+    try {
+      const data = await rpc('get_statement', { p_bill_id: bill.id });
+      const statement = window.OMECO_STATEMENT.render(data);
+      const ref = data.bill && data.bill.payment_reference;
+      const copy = el('button', { type: 'button', class: 'secondary-btn' }, 'Copy payment ref.');
+      copy.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(ref); copy.textContent = 'Copied ✓'; } catch { copy.textContent = ref; }
+        setTimeout(() => { copy.textContent = 'Copy payment ref.'; }, 2500);
+      });
+      copy.disabled = !ref;
+      holder.replaceChildren(statement,
+        el('div', { class: 'soa-actions' },
+          el('button', { type: 'button', class: 'primary-btn', onclick: () => window.OMECO_STATEMENT.print(statement) }, 'Print / Save as PDF'),
+          copy));
+    } catch (error) {
+      holder.replaceChildren(el('p', { class: 'soa-loading', text: `Could not load the statement: ${error.message}` }));
+    }
   }
 
   function printBill(bill, rows, charges) {

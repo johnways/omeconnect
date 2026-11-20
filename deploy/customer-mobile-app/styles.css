@@ -1381,3 +1381,8 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
 @media (max-width: 360px) {
   .est-app-fields { grid-template-columns: 1fr 1fr; }
 }
+
+/* Statement viewer sheet */
+.sheet.wide { max-width: 480px; background: #e7ebf1; }
+.sheet.wide .sheet-head { background: #e7ebf1; }
+:root[data-theme="dark"] .sheet.wide, :root[data-theme="dark"] .sheet.wide .sheet-head { background: #0d1627; }

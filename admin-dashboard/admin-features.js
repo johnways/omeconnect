@@ -367,11 +367,78 @@
     }
   });
 
-  // ------------------------------------------------------------ electricity rate (₱ / kWh)
+  // ------------------------------------------------------------ electricity rate (₱ / kWh) + full schedule
   const CLASS_LABEL = { residential: 'Residential', commercial: 'Commercial', industrial: 'Industrial', public_building: 'Public building' };
-  const RATE_PART_LABEL = { generation: 'Generation', transmission: 'Transmission', system_loss: 'System loss', distribution: 'Distribution', supply: 'Supply & metering', universal: 'Universal charges', subsidies: 'Subsidies / lifeline', taxes: 'Taxes' };
   const peso4 = (v) => `₱${Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
   const todayPH = () => new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10);
+  const GROUPS = ['GENERATION', 'TRANSMISSION', 'DISTRIBUTION', 'OTHERS', 'VALUE ADDED TAX', 'UNIVERSAL CHARGES', 'LOCAL TAX'];
+  // Line names as printed on the OMECO statement (rates are entered by staff).
+  const TEMPLATE = [
+    ['GENERATION', 'Generation Charge', 'kwh'], ['GENERATION', 'System Loss Charge', 'kwh'],
+    ['DISTRIBUTION', 'Distribution System Charge', 'kwh'], ['DISTRIBUTION', 'Supply System Charge', 'kwh'],
+    ['DISTRIBUTION', 'Retail Metering Customer Charge', 'month'], ['DISTRIBUTION', 'Metering System Charge', 'kwh'],
+    ['OTHERS', 'SR Citizen Subsidy', 'kwh'], ['OTHERS', 'Lifeline Rate Subsidy', 'kwh'],
+    ['VALUE ADDED TAX', 'Generation', 'kwh'], ['VALUE ADDED TAX', 'System Loss VAT', 'kwh'],
+    ['VALUE ADDED TAX', 'Distribution', 'pct', 'DISTRIBUTION'], ['VALUE ADDED TAX', 'Others', 'pct', 'OTHERS'],
+    ['UNIVERSAL CHARGES', 'Missionary', 'kwh'], ['UNIVERSAL CHARGES', 'Environmental', 'kwh'],
+    ['UNIVERSAL CHARGES', 'NPC Stranded Debts', 'kwh'], ['UNIVERSAL CHARGES', 'RED', 'kwh'],
+    ['LOCAL TAX', 'Business Tax', 'kwh'], ['LOCAL TAX', 'Real Property Tax', 'kwh']
+  ];
+  let schedule = [];
+
+  function schedPreview() {
+    const kwh = Math.max(0, Number($('schedPreviewKwh').value) || 0);
+    const lines = schedule.filter((l) => l.rate !== '' && Number.isFinite(Number(l.rate)) && l.name.trim());
+    const sums = {};
+    lines.filter((l) => l.per !== 'pct').forEach((l) => {
+      const amt = Math.round((l.per === 'month' ? Number(l.rate) : kwh * Number(l.rate)) * 100) / 100;
+      sums[l.group] = (sums[l.group] || 0) + amt;
+    });
+    let total = 0;
+    lines.forEach((l) => {
+      const amt = l.per === 'month' ? Number(l.rate) : l.per === 'pct' ? (sums[l.of] || 0) * Number(l.rate) : kwh * Number(l.rate);
+      total += Math.round(amt * 100) / 100;
+    });
+    const perKwh = lines.filter((l) => l.per === 'kwh').reduce((a, l) => a + Number(l.rate), 0);
+    const monthly = lines.filter((l) => l.per === 'month').reduce((a, l) => a + Number(l.rate), 0);
+    $('schedSummary').textContent = lines.length
+      ? `${lines.length} lines · ${peso4(perKwh)} per kWh + ${ctx().peso(monthly)} per month + % lines`
+      : 'No schedule lines with a rate yet (the simple rate above will be used).';
+    $('schedPreviewTotal').textContent = lines.length ? `= ${ctx().peso(total)}` : '';
+    return lines;
+  }
+
+  function renderSchedule() {
+    $('schedRows').replaceChildren(...schedule.map((line, index) => {
+      const group = el('select', { 'aria-label': 'Group' }, ...GROUPS.map((g) => new Option(g, g)));
+      group.value = GROUPS.includes(line.group) ? line.group : 'OTHERS';
+      const name = el('input', { type: 'text', maxlength: '60', 'aria-label': 'Charge name' });
+      name.value = line.name;
+      const rate = el('input', { type: 'number', step: '0.0001', 'aria-label': 'Rate', placeholder: line.per === 'pct' ? '0.12' : '0.0000' });
+      rate.value = line.rate;
+      const per = el('select', { 'aria-label': 'Charged per' }, new Option('per kWh', 'kwh'), new Option('per month', 'month'), new Option('% of group', 'pct'));
+      per.value = line.per;
+      const of = el('select', { 'aria-label': 'Of group' }, new Option('—', ''), ...GROUPS.map((g) => new Option(g, g)));
+      of.value = line.of || '';
+      of.disabled = line.per !== 'pct';
+      const remove = el('button', { type: 'button', class: 'btn-sm', 'aria-label': 'Remove line' }, '×');
+      group.addEventListener('change', () => { line.group = group.value; schedPreview(); });
+      name.addEventListener('input', () => { line.name = name.value; schedPreview(); });
+      rate.addEventListener('input', () => { line.rate = rate.value; schedPreview(); });
+      per.addEventListener('change', () => { line.per = per.value; of.disabled = line.per !== 'pct'; if (line.per !== 'pct') { line.of = ''; of.value = ''; } schedPreview(); });
+      of.addEventListener('change', () => { line.of = of.value; schedPreview(); });
+      remove.addEventListener('click', () => { schedule.splice(index, 1); renderSchedule(); });
+      return el('tr', {}, el('td', {}, group), el('td', {}, name), el('td', {}, rate), el('td', {}, per), el('td', {}, of), el('td', {}, remove));
+    }));
+    schedPreview();
+  }
+  $('schedTemplate').addEventListener('click', () => {
+    if (schedule.some((l) => l.rate !== '') && !window.confirm('Replace the lines you entered with the statement template?')) return;
+    schedule = TEMPLATE.map(([group, name, per, of]) => ({ group, name, per, of: of || '', rate: per === 'pct' ? '0.12' : '' }));
+    renderSchedule();
+  });
+  $('schedAdd').addEventListener('click', () => { schedule.push({ group: 'OTHERS', name: '', per: 'kwh', of: '', rate: '' }); renderSchedule(); });
+  $('schedPreviewKwh').addEventListener('input', schedPreview);
 
   async function showRates() {
     const form = $('rateForm');
@@ -379,73 +446,179 @@
     if (!$('rateEffective').value) $('rateEffective').value = todayPH();
     if (!ctx().live()) return;
     try {
-      const [current, history] = await Promise.all([
+      const [current, history, header] = await Promise.all([
         rpc('get_current_rates'),
-        api('/rest/v1/electricity_rates?select=customer_class,rate_per_kwh,fixed_charge,effective_from,note,created_at&order=effective_from.desc,created_at.desc&limit=30')
+        api('/rest/v1/electricity_rates?select=customer_class,rate_per_kwh,fixed_charge,schedule,surcharge_percent,effective_from,note,created_at&order=effective_from.desc,created_at.desc&limit=30'),
+        api('/rest/v1/app_settings?key=eq.statement_header&select=value').catch(() => [])
       ]);
       $('currentRates').replaceChildren(...(current && current.length ? current.map((r) => el('div', { class: 'rate-chip' },
         el('span', {}, CLASS_LABEL[r.customer_class] || r.customer_class),
         el('strong', {}, `${peso4(r.rate_per_kwh)} / kWh`),
-        el('small', {}, `${Number(r.fixed_charge) ? `+ ${ctx().peso(r.fixed_charge)} monthly · ` : ''}since ${ctx().fmtDate(r.effective_from, false)}`)))
+        el('small', {}, `${Number(r.fixed_charge) ? `+ ${ctx().peso(r.fixed_charge)} monthly · ` : ''}${r.schedule ? `${r.schedule.length} statement lines · ` : ''}since ${ctx().fmtDate(r.effective_from, false)}`)))
         : [el('p', { class: 'rate-missing' }, 'No rate set yet. Customers will see "rate not published" in the Bill estimator until you save one.')]));
+      // Start the editor from the residential schedule in effect.
+      const residential = (current || []).find((r) => r.customer_class === 'residential');
+      if (!schedule.length && residential && Array.isArray(residential.schedule)) {
+        schedule = residential.schedule.map((l) => ({ group: l.group, name: l.name, per: l.per, of: l.of || '', rate: String(l.rate) }));
+        $('rateSurcharge').value = residential.surcharge_percent ?? 5;
+      }
+      renderSchedule();
       const today = todayPH();
       ctx().setRows('rateHistoryRows', 'rateHistoryEmpty', (history || []).map((r) => el('tr', {},
         el('td', {}, ctx().fmtDate(r.effective_from, false), r.effective_from > today ? el('span', { class: 'cell-sub' }, 'upcoming') : null),
         el('td', {}, CLASS_LABEL[r.customer_class] || r.customer_class),
         el('td', { class: 'mono' }, peso4(r.rate_per_kwh)),
         el('td', { class: 'mono' }, ctx().peso(r.fixed_charge)),
-        el('td', {}, r.note || '—'),
+        el('td', {}, [r.note, r.schedule ? `${r.schedule.length} lines` : null].filter(Boolean).join(' · ') || '—'),
         el('td', {}, ctx().fmtDate(r.created_at)))), 'No rates yet.');
+      const h = (header && header[0] && header[0].value) || {};
+      $('hdrName').value = h.name || '';
+      $('hdrShort').value = h.short || '';
+      $('hdrAddress').value = h.address || '';
+      $('hdrTin').value = h.tin || '';
+      $('hdrHotline').value = h.hotline || '';
+      $('hdrFooter').value = h.footer || '';
     } catch (error) {
       ctx().toast(`Could not load rates: ${error.message}`, 'error');
     }
   }
 
-  function readRateComponents() {
-    const parts = {};
-    document.querySelectorAll('#rateComponents [data-rate]').forEach((input) => {
-      if (input.value !== '' && Number.isFinite(Number(input.value))) parts[input.dataset.rate] = Number(input.value);
-    });
-    return parts;
-  }
-  $('rateComponents').addEventListener('input', () => {
-    const parts = readRateComponents();
-    const sum = Object.values(parts).reduce((a, b) => a + b, 0);
-    const rate = Number($('rateValue').value);
-    $('rateComponentSum').textContent = Object.keys(parts).length
-      ? `Breakdown total: ${peso4(sum)} per kWh${rate ? (Math.abs(sum - rate) < 0.0001 ? ' · matches the rate ✓' : ` · rate is ${peso4(rate)} (difference ${peso4(rate - sum)})`) : ''}`
-      : '';
-  });
-
   $('rateForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!ctx().needLive()) return;
+    const lines = schedPreview();
     const rate = Number($('rateValue').value);
-    if (!(rate > 0 && rate < 1000)) { ctx().toast('Enter the rate per kWh, e.g. 11.8523.', 'error'); return; }
-    const parts = readRateComponents();
+    if (!lines.length && !(rate > 0 && rate < 1000)) { ctx().toast('Enter the rate per kWh, or fill the full rate schedule.', 'error'); return; }
+    const badPct = lines.find((l) => l.per === 'pct' && (!l.of || Number(l.rate) > 1));
+    if (badPct) { ctx().toast(`"${badPct.name}": choose the group and enter the % as a decimal (12% = 0.12).`, 'error'); return; }
+    const surcharge = Number($('rateSurcharge').value);
     const label = CLASS_LABEL[$('rateClass').value];
     const done = await ctx().openModal({
       title: 'Save new electricity rate?',
       confirmText: 'Save rate',
       content: [el('p', { class: 'modal-summary' },
-        `${label}: ${peso4(rate)} per kWh`, el('br'),
-        `Fixed monthly charge: ${ctx().peso(Number($('rateFixed').value) || 0)}`, el('br'),
+        lines.length ? `${label}: ${lines.length}-line rate schedule (${$('schedSummary').textContent})` : `${label}: ${peso4(rate)} per kWh`, el('br'),
+        lines.length ? '' : `Fixed monthly charge: ${ctx().peso(Number($('rateFixed').value) || 0)}`, lines.length ? null : el('br'),
+        `Late surcharge: ${Number.isFinite(surcharge) ? surcharge : 5}%`, el('br'),
         `Takes effect: ${ctx().fmtDate($('rateEffective').value, false)}`, el('br'),
-        'Customers will see it in the Bill estimator from that date. Past bills are not changed.')],
+        'Used for new bills and the customers\' Bill estimator from that date. Past bills are not changed.')],
       onConfirm: () => rpc('set_electricity_rate', {
-        p_customer_class: $('rateClass').value, p_rate_per_kwh: rate, p_fixed_charge: Number($('rateFixed').value) || 0,
-        p_components: Object.keys(parts).length ? parts : null, p_effective_from: $('rateEffective').value || null,
+        p_customer_class: $('rateClass').value,
+        p_rate_per_kwh: lines.length ? null : rate,
+        p_fixed_charge: lines.length ? 0 : (Number($('rateFixed').value) || 0),
+        p_schedule: lines.length ? lines.map((l) => ({ group: l.group, name: l.name.trim(), rate: Number(l.rate), per: l.per, of: l.per === 'pct' ? l.of : undefined })) : null,
+        p_surcharge_percent: Number.isFinite(surcharge) ? surcharge : 5,
+        p_effective_from: $('rateEffective').value || null,
         p_note: $('rateNote').value.trim() || null
       })
     });
     if (done) {
-      ctx().toast('Rate saved. Customers can now estimate their bill with it.', 'success');
-      $('rateForm').reset();
+      ctx().toast('Rate saved. New bills and the Bill estimator will use it.', 'success');
+      $('rateValue').value = '';
+      $('rateFixed').value = '';
+      $('rateNote').value = '';
       $('rateEffective').value = todayPH();
-      $('rateComponentSum').textContent = '';
       await showRates();
     }
   });
+
+  $('headerForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!ctx().needLive()) return;
+    try {
+      await rpc('set_statement_header', { p_header: {
+        name: $('hdrName').value, short: $('hdrShort').value, address: $('hdrAddress').value,
+        tin: $('hdrTin').value, hotline: $('hdrHotline').value, footer: $('hdrFooter').value
+      } });
+      ctx().toast('Statement header saved.', 'success');
+    } catch (error) { ctx().toast(error.message, 'error'); }
+  });
+
+  // ------------------------------------------------------------ bill: readings -> kWh -> amount (frozen lines)
+  let billCalc = null; // last computed { lines, total, surcharge_percent }
+  const CLASS_FROM_CODE = { R: 'residential', C: 'commercial', I: 'industrial', P: 'public_building' };
+
+  $('billCalc').addEventListener('click', async () => {
+    if (!ctx().needLive()) return;
+    const prev = $('billPrev').value;
+    const present = $('billPresent').value;
+    const mult = Math.max(1, Number($('billMult').value) || 1);
+    let kwh = $('billKwh').value === '' ? null : Number($('billKwh').value);
+    if (prev !== '' && present !== '') {
+      if (Number(present) < Number(prev)) { ctx().toast('Present reading is lower than the previous reading.', 'error'); return; }
+      kwh = (Number(present) - Number(prev)) * mult;
+    }
+    if (kwh === null || !(kwh >= 0)) { ctx().toast('Enter the readings (or kWh) first.', 'error'); return; }
+    try {
+      const result = await rpc('compute_bill', { p_kwh: kwh, p_customer_class: $('billClass').value, p_on: $('billReadingDate').value || null });
+      billCalc = result;
+      $('billKwh').value = String(Math.round(kwh * 100) / 100);
+      $('billAmount').value = Number(result.total).toFixed(2);
+      $('billCalcNote').textContent = `${kwh} kWh → ${ctx().peso(result.total)} using the ${CLASS_LABEL[result.customer_class] || result.customer_class} rate since ${ctx().fmtDate(result.effective_from, false)}. The lines are saved on the bill.`;
+      $('billCalcLines').replaceChildren(el('table', {}, el('tbody', {}, (result.lines || []).map((l) => el('tr', {},
+        el('td', {}, `${l.group} · ${l.name}`), el('td', { class: 'mono' }, Number(l.rate).toFixed(4)), el('td', { class: 'mono' }, Number(l.amount).toFixed(2)))))));
+      $('billCalcLines').classList.remove('hidden');
+    } catch (error) {
+      billCalc = null;
+      ctx().toast(error.message, 'error');
+    }
+  });
+  // Changing the amount by hand drops the computed lines (they would no longer add up).
+  $('billAmount').addEventListener('input', () => {
+    if (billCalc && Math.abs(Number($('billAmount').value) - Number(billCalc.total)) > 0.004) {
+      billCalc = null;
+      $('billCalcLines').classList.add('hidden');
+      $('billCalcNote').textContent = 'Amount changed by hand: the computed lines will not be saved.';
+    }
+  });
+  $('billPrev').addEventListener('input', () => { billCalc = null; $('billCalcLines').classList.add('hidden'); });
+  $('billPresent').addEventListener('input', () => { billCalc = null; $('billCalcLines').classList.add('hidden'); });
+  $('billDue').addEventListener('change', () => {
+    if ($('billDue').value && !$('billCutoff').value) {
+      const d = new Date(`${$('billDue').value}T00:00:00Z`); // UTC: no time-zone shift
+      d.setUTCDate(d.getUTCDate() + 1);
+      $('billCutoff').value = d.toISOString().slice(0, 10);
+    }
+  });
+
+  function readBillDetails(amount) {
+    const num = (id) => ($(id).value === '' ? null : Number($(id).value));
+    const date = (id) => $(id).value || null;
+    const out = {
+      previous_reading: num('billPrev'), present_reading: num('billPresent'), multiplier: Math.max(1, num('billMult') || 1),
+      reading_date: date('billReadingDate'), period_from: date('billFrom'), period_to: date('billTo'), cutoff_date: date('billCutoff')
+    };
+    if (billCalc && Math.abs(Number(amount) - Number(billCalc.total)) <= 0.004) {
+      out.line_items = billCalc.lines;
+      out.surcharge_rate = Math.min(0.5, Math.max(0, Number(billCalc.surcharge_percent || 5) / 100));
+    }
+    return out;
+  }
+  function resetBillDetails() {
+    billCalc = null;
+    $('billMult').value = '1';
+    $('billCalcLines').classList.add('hidden');
+    $('billCalcNote').textContent = 'Fills kWh and amount from the readings and the current rates.';
+  }
+
+  // ------------------------------------------------------------ online statement (receipt)
+  async function showStatement(billId) {
+    if (!ctx().needLive() || !window.OMECO_STATEMENT) return;
+    const holder = el('div', { class: 'soa-viewer' }, el('p', { class: 'soa-loading' }, 'Loading statement…'));
+    let statement = null;
+    const opened = ctx().openModal({
+      title: 'Statement of Account', confirmText: 'Print / Save as PDF', content: [holder],
+      onConfirm: async () => { if (statement) window.OMECO_STATEMENT.print(statement); }
+    });
+    try {
+      const data = await rpc('get_statement', { p_bill_id: billId });
+      statement = window.OMECO_STATEMENT.render(data);
+      holder.replaceChildren(statement);
+    } catch (error) {
+      holder.replaceChildren(el('p', { class: 'soa-loading' }, `Could not load the statement: ${error.message}`));
+    }
+    await opened;
+  }
 
   // ------------------------------------------------------------ wire into the console
   const views = ctx().views;
@@ -457,6 +630,7 @@
 
   window.adminFeatures = {
     onSignIn, showPhotos, renderOutages, readCharges, roleCell, staffActions, showBackups, updateMeterBadge,
+    readBillDetails, resetBillDetails, showStatement,
     get role() { return role; }
   };
 })();

@@ -35,6 +35,8 @@ jobs:
         run: |
           cmp customer-mobile-app/live.js admin-dashboard/live.js
           cmp customer-mobile-app/theme.js admin-dashboard/theme.js
+          cmp customer-mobile-app/statement.js admin-dashboard/statement.js
+          cmp customer-mobile-app/statement.css admin-dashboard/statement.css
 
       - name: Every script and stylesheet referenced by the pages exists
         run: |

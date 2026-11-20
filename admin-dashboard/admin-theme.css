@@ -735,3 +735,32 @@ body.bell-open { overflow: hidden; }
 [data-theme="dark"] .rate-chip { background: linear-gradient(135deg, rgba(59, 123, 242, 0.14), #111b2e); border-color: rgba(59, 123, 242, 0.4); }
 [data-theme="dark"] .rate-chip strong { color: #b9cff7; }
 [data-theme="dark"] .rate-missing { color: #fbbf24; }
+
+/* ================= Rate schedule editor, bill calculation, statement viewer ================= */
+.sched-tools { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 8px 0; }
+.sched-surcharge { display: grid; gap: 4px; font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+.sched-surcharge input { width: 110px; }
+.sched-table { width: 100%; font-size: 0.84rem; }
+.sched-table th { font-size: 0.72rem; }
+.sched-table td { padding: 4px 4px; vertical-align: middle; }
+.sched-table select, .sched-table input {
+  width: 100%; min-width: 70px; padding: 6px 8px; border-radius: 8px; border: 1px solid #dbe3ee;
+  font: inherit; font-size: 0.84rem; background: var(--white, #fff); color: var(--text);
+}
+.sched-table td:nth-child(2) input { min-width: 170px; }
+.sched-table td:nth-child(3) input { min-width: 90px; font-variant-numeric: tabular-nums; }
+.sched-table select:disabled { opacity: 0.45; }
+.sched-preview { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 0.86rem; }
+.sched-preview label { display: flex !important; align-items: center; gap: 6px; }
+.sched-preview input { width: 90px; }
+.sched-preview strong { font-size: 1rem; }
+.calc-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.calc-lines { margin-top: 8px; max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+.calc-lines.hidden { display: none; }
+.calc-lines table { width: 100%; font-size: 0.8rem; }
+.calc-lines td { padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.calc-lines td.mono { text-align: right; }
+.header-form { margin-top: 10px; }
+.modal-body .soa-viewer { background: #e7ebf1; margin: -4px; padding: 12px 8px; border-radius: 12px; max-height: 70vh; overflow: auto; }
+[data-theme="dark"] .modal-body .soa-viewer { background: #0d1627; }
+[data-theme="dark"] .sched-table select, [data-theme="dark"] .sched-table input { background: #0d1627; border-color: #31425f; color: var(--text); }

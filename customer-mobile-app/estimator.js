@@ -209,11 +209,37 @@
       compare.classList.add('hidden');
       return;
     }
+    $('estKwhUsed').textContent = `${kwh.toLocaleString('en-PH', { maximumFractionDigits: 1 })} kWh used${note ? ` (${note})` : ''}`;
+
+    // Full statement schedule (same math as the database's compute_bill()).
+    if (Array.isArray(rate.schedule) && rate.schedule.length) {
+      const sums = {};
+      rate.schedule.filter((l) => l.per !== 'pct').forEach((l) => {
+        const amt = Math.round((l.per === 'month' ? Number(l.rate) : kwh * Number(l.rate)) * 100) / 100;
+        sums[l.group] = (sums[l.group] || 0) + amt;
+      });
+      const groups = new Map();
+      let sTotal = 0;
+      rate.schedule.forEach((l) => {
+        const amt = Math.round((l.per === 'month' ? Number(l.rate) : l.per === 'pct' ? (sums[l.of] || 0) * Number(l.rate) : kwh * Number(l.rate)) * 100) / 100;
+        sTotal += amt;
+        groups.set(l.group, (groups.get(l.group) || 0) + amt);
+      });
+      sTotal = Math.round(sTotal * 100) / 100;
+      $('estTotal').textContent = peso(sTotal);
+      const groupRows = [];
+      groups.forEach((amount, group) => groupRows.push(...row(group.charAt(0) + group.slice(1).toLowerCase(), peso(amount))));
+      groupRows.push(...row('Estimated total', peso(sTotal), true));
+      if (Number(rate.surcharge_percent)) groupRows.push(...row(`If paid late (+${Number(rate.surcharge_percent)}%)`, peso(Math.round(sTotal * (1 + Number(rate.surcharge_percent) / 100) * 100) / 100)));
+      breakdown.replaceChildren(...groupRows);
+      showCompare(kwh);
+      return;
+    }
+
     const energy = kwh * Number(rate.rate_per_kwh);
     const fixed = Number(rate.fixed_charge) || 0;
     const total = Math.round((energy + fixed) * 100) / 100;
     $('estTotal').textContent = peso(total);
-    $('estKwhUsed').textContent = `${kwh.toLocaleString('en-PH', { maximumFractionDigits: 1 })} kWh used${note ? ` (${note})` : ''}`;
 
     const rows = [];
     const parts = rate.components && typeof rate.components === 'object' ? Object.entries(rate.components) : [];
@@ -231,8 +257,12 @@
     if (fixed) rows.push(...row('Fixed monthly charge', peso(fixed)));
     rows.push(...row('Estimated total', peso(total), true));
     breakdown.replaceChildren(...rows);
+    showCompare(kwh);
+  }
 
-    // Compare with the customer's latest real bill.
+  // Compare with the customer's latest real bill.
+  function showCompare(kwh) {
+    const compare = $('estCompare');
     const bills = (typeof currentCustomer !== 'undefined' && currentCustomer && currentCustomer.bills) || [];
     const last = bills.find((b) => b.consumption_kwh != null && Number(b.consumption_kwh) > 0);
     if (last) {
