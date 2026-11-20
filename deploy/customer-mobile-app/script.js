@@ -860,9 +860,7 @@ document.addEventListener('visibilitychange', () => {
 const AUTO_ASK_KEY = 'omeconnect.pushAsked';
 let autoAskArmed = false;
 
-function askedRecently() {
-  try { return Date.now() - Number(localStorage.getItem(AUTO_ASK_KEY) || 0) < 24 * 60 * 60 * 1000; } catch { return false; }
-}
+let autoAskedThisOpen = false;
 
 async function autoAskForNotifications() {
   if (!currentSession || !pushSupported || Notification.permission !== 'default') return 'skip';
@@ -882,7 +880,10 @@ async function autoAskForNotifications() {
 }
 
 function armAutoAsk() {
-  if (autoAskArmed || !pushSupported || Notification.permission !== 'default' || askedRecently()) return;
+  // Asks once per app opening while the phone has not decided yet (Android
+  // itself stops showing the question if the customer refuses it twice).
+  if (autoAskArmed || autoAskedThisOpen || !pushSupported || Notification.permission !== 'default') return;
+  autoAskedThisOpen = true;
   autoAskArmed = true;
   const onFirstTap = () => {
     window.removeEventListener('pointerup', onFirstTap, true);
