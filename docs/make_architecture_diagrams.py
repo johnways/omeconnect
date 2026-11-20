@@ -62,51 +62,21 @@ class Page:
 pages = []
 
 # ---------------------------------------------------------------- 1. Conceptual
-p = Page("1. Conceptual Architecture", "concept")
-p.title("OMECOnnect – Conceptual Architecture",
-        "Who uses the system, the apps they use, the cloud backend, and the outside services it relies on.")
-# Outside services (top row)
-google = p.v("<b>Google Sign-In</b><br>(OAuth 2.0)", 430, 80, 190, 60, BOX + ORANGE)
-mail = p.v("<b>Email Service</b><br>Supabase mailer / Brevo SMTP", 650, 80, 200, 60, BOX + ORANGE)
-sms = p.v("<b>textbee SMS Gateway</b><br>Android phone + PH SIM → customer's mobile", 880, 80, 250, 60, BOX + ORANGE)
-# Users and apps (left)
-cust = p.v("Customer", 50, 270, 40, 70, ACTOR)
-staff = p.v("OMECO Staff / Admin", 50, 480, 40, 70, ACTOR)
-app = p.v("<b>Customer Mobile App</b><br>Bills, announcements, concerns,<br>AI assistant, profile &amp; security<br><i>(HTML/JS prototype → Flutter)</i>",
-          120, 250, 210, 110, BOX + BLUE)
-admin = p.v("<b>Admin Web Dashboard</b><br>Customer verification, billing,<br>announcements, complaints, reports",
-            120, 460, 210, 110, BOX + BLUE)
-ai = p.v("<b>AI Service</b><br>approved knowledge base <i>(planned)</i>", 120, 650, 210, 60, BOX + GREY + "dashed=1;")
-# Backend container
-p.v("<b>OMECOnnect Cloud Backend (Supabase)</b>", 410, 190, 740, 520,
-    "rounded=1;whiteSpace=wrap;html=1;arcSize=3;dashed=1;fillColor=#fafafa;strokeColor=#999999;verticalAlign=top;align=center;spacingTop=6;")
-auth = p.v("<b>Supabase Auth</b><br>Email + password · Google sign-in<br>Mobile OTP (5-min code)<br>Authenticator 2-step (TOTP)",
-           440, 240, 220, 120, BOX + GREEN)
-fn = p.v("<b>Edge Function</b><br>send-sms-textbee<br>(Send SMS hook)", 900, 240, 220, 90, BOX + PURPLE)
-api = p.v("<b>Data API (PostgREST)</b><br>HTTPS + JWT<br>per-user access", 440, 450, 220, 120, BOX + GREEN)
-db = p.v("<b>PostgreSQL Database</b><br>customers, accounts, bills, payments,<br>announcements, notifications, complaints,<br>AI chat history, audit logs<br><i>Row Level Security on every table</i>",
-         720, 400, 280, 140, BOX + YELLOW)
-cron = p.v("<b>Scheduled job (pg_cron)</b><br>daily bill due-date reminders", 720, 600, 280, 60, BOX + PURPLE)
-fcm = p.v("<b>Firebase Cloud Messaging</b><br>push notifications <i>(planned)</i>", 1190, 430, 190, 80, BOX + GREY + "dashed=1;")
-p.v("<i>XAMPP / MySQL: local testing only, not production</i>", 420, 670, 280, 30,
-    "text;html=1;align=left;verticalAlign=middle;fontColor=#777777;")
-ORTH = EDGE + "edgeStyle=orthogonalEdgeStyle;"
-p.e(cust, app, "uses")
-p.e(staff, admin, "uses")
-p.e(app, auth, "sign up / sign in / OTP", EDGE + "exitX=1;exitY=0.4;entryX=0;entryY=0.5;")
-p.e(app, api, "data requests + JWT", EDGE + "exitX=1;exitY=0.8;entryX=0;entryY=0.25;")
-p.e(admin, auth, "staff sign in", EDGE + "exitX=1;exitY=0.2;entryX=0;entryY=0.85;")
-p.e(admin, api, "manage records", EDGE + "exitX=1;exitY=0.6;entryX=0;entryY=0.7;")
-p.e(auth, google, "OAuth (PKCE)", EDGE + "exitX=0.4;exitY=0;entryX=0.5;entryY=1;")
-p.e(auth, mail, "confirm / reset emails", EDGE + "exitX=0.85;exitY=0;entryX=0.4;entryY=1;")
-p.e(auth, fn, "OTP code (signed hook)", EDGE + "exitX=1;exitY=0.3;entryX=0;entryY=0.4;")
-p.e(fn, sms, "send SMS", EDGE + "exitX=0.5;exitY=0;entryX=0.4;entryY=1;")
-p.e(auth, db, "users, sessions", EDGE + "exitX=1;exitY=0.85;entryX=0.2;entryY=0;")
-p.e(api, db, "queries filtered by RLS", EDGE + "exitX=1;exitY=0.6;entryX=0;entryY=0.75;")
-p.e(cron, db, "creates reminders", EDGE + "exitX=0.5;exitY=0;entryX=0.5;entryY=1;")
-p.e(db, fcm, "alerts (planned)", DASHED_EDGE + "exitX=1;exitY=0.5;entryX=0;entryY=0.5;")
-p.e(app, ai, "", DASHED_EDGE + ORTH.replace(EDGE, "") + "exitX=0;exitY=0.85;entryX=0;entryY=0.5;")
-pages.append(p)
+# Current system layout lives in concept_architecture.py (also renders the PNG).
+import os as _os
+sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import concept_architecture as _concept
+
+
+class _RawPage:
+    def __init__(self, xml):
+        self._xml = xml
+
+    def xml(self):
+        return self._xml
+
+
+pages.append(_RawPage(_concept.drawio_page()))
 
 # ---------------------------------------------------------------- 2. Layered
 p = Page("2. Layered Architecture", "layer")
