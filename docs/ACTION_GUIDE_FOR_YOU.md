@@ -59,7 +59,6 @@ Upgrade Supabase to **Pro** and Vercel to **Pro** (see the cost plan in `docs/OP
 | 12 | Scheduled outage calendar | Staff: announcement **Outage starts / ends**; customer Home: **Scheduled power interruptions** |
 | 13 | Outage board | Customer Home → power card: open outage reports per barangay in your town |
 | 14 | Usage insights and saving tips | Customer Home → **Your usage** |
-| 16 | Text size option | Customer **Profile → Text size** (Normal / Large / Extra large) |
 | 17 | Management dashboard | Staff **Reports**: collected amount, overdue accounts, outages by barangay (plus the existing figures) |
 | 18 | Import preview | Staff **Bills → Import**: the file is checked and previewed before saving (already existed) |
 | 19 | Field-staff directions | Staff **Complaints → Directions** opens Google Maps to the customer's barangay |

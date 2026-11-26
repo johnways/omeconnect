@@ -1505,25 +1505,7 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
   .due-chip, .due-chip.late::before { animation: none !important; }
 }
 
-/* ---------------------------------------------------------------- text size (Profile) */
-html.text-large { font-size: 110%; }
-html.text-large body { font-size: 16.5px; }
-html.text-xlarge { font-size: 122%; }
-html.text-xlarge body { font-size: 18px; }
-.text-size-card { margin-top: 18px; }
-.text-size-card h3, .contact-card h3, .insight-card h3, .schedule-card h3, .payment-history h3 { margin: 0 0 10px; font-size: 1rem; font-weight: 800; }
-.size-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.size-btn {
-  display: grid; justify-items: center; gap: 2px; padding: 10px 6px; cursor: pointer;
-  border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-2);
-  font: inherit; font-size: 0.78rem; font-weight: 600; transition: border-color .15s ease, background-color .15s ease, color .15s ease;
-}
-.size-btn .size-a { font-weight: 800; line-height: 1; color: var(--text); }
-.size-normal .size-a { font-size: 1rem; }
-.size-large .size-a { font-size: 1.25rem; }
-.size-xlarge .size-a { font-size: 1.5rem; }
-.size-btn[aria-pressed="true"] { border-color: var(--blue-600); background: var(--blue-50); color: var(--blue-600); box-shadow: inset 0 0 0 1px var(--blue-600); }
-.size-btn:focus-visible { outline: 2px solid var(--blue-600); outline-offset: 2px; }
+.contact-card h3, .insight-card h3, .schedule-card h3, .payment-history h3 { margin: 0 0 10px; font-size: 1rem; font-weight: 800; }
 
 /* ---------------------------------------------------------------- contact OMECO */
 .contact-card { margin-top: 14px; }

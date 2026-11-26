@@ -3,7 +3,6 @@
 //   - Outage board (Home power card): open outage reports per barangay in your town
 //   - Scheduled power interruptions (Home): upcoming announcements that have a time window
 //   - Payment history (Bills): your payments with a link to the receipt
-//   - Text size (Profile): Normal / Large / Extra large, remembered on this device
 //   - Contact OMECO (sign-in page and Profile): address and hotline set by OMECO staff
 // Every value from the server is shown with textContent (never as HTML).
 (function () {
@@ -193,31 +192,6 @@
     box.classList.remove('hidden');
   }
 
-  // ------------------------------------------------------------ text size (Profile)
-  const SIZE_KEY = 'omeconnect.textSize';
-  const SIZES = { normal: 'Normal', large: 'Large', xlarge: 'Extra large' };
-  function applySize(size) {
-    document.documentElement.classList.toggle('text-large', size === 'large');
-    document.documentElement.classList.toggle('text-xlarge', size === 'xlarge');
-    document.querySelectorAll('[data-text-size]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.textSize === size)));
-  }
-  function savedSize() {
-    try { return localStorage.getItem(SIZE_KEY) || 'normal'; } catch { return 'normal'; }
-  }
-  applySize(savedSize());
-  function buildTextSize() {
-    const box = $('textSizeCard');
-    if (!box || box.childElementCount) return;
-    box.append(
-      el('h3', { text: 'Text size' }),
-      el('div', { class: 'size-switch', role: 'group', 'aria-label': 'Text size' },
-        Object.entries(SIZES).map(([value, label]) =>
-          el('button', { type: 'button', class: `size-btn size-${value}`, 'data-text-size': value, 'aria-pressed': 'false',
-            onclick: () => { try { localStorage.setItem(SIZE_KEY, value); } catch { /* ignore */ } applySize(value); } },
-          el('span', { class: 'size-a', 'aria-hidden': 'true', text: 'A' }), el('span', { text: label })))));
-    applySize(savedSize());
-  }
-
   // ------------------------------------------------------------ contact OMECO (sign-in + Profile)
   let contact = null;
   async function loadContact() {
@@ -254,7 +228,6 @@
     const tab = event.target.closest('[data-screen]');
     if (tab && tab.dataset.screen === 'billsScreen') void renderPayments(false);
   });
-  buildTextSize();
   void renderContact();
   window.OMECO_INSIGHTS = { refresh: () => renderAll(true) };
 })();
