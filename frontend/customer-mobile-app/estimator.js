@@ -1,5 +1,5 @@
 // OMECOnnect bill estimator ("meter converter").
-// Converts meter readings, kWh, or appliance use (watts x hours) into kWh and
+// Converts meter readings or kWh into an expected bill and
 // multiplies by the rate OMECO staff set in the admin console
 // (electricity_rates, read with get_current_rates()).
 // Uses script.js globals: currentSession, currentCustomer, formatCurrency.
@@ -14,42 +14,29 @@
     generation: 'Generation', transmission: 'Transmission', system_loss: 'System loss', distribution: 'Distribution',
     supply: 'Supply & metering', universal: 'Universal charges', subsidies: 'Subsidies / lifeline', taxes: 'Taxes'
   };
-  // Typical wattage (sticker values vary) and daily hours as a starting point.
-  const APPLIANCES = [
-    ['LED bulb', 10, 6], ['Fluorescent tube', 40, 6], ['Electric fan', 60, 8], ['Television (LED 32")', 60, 5],
-    ['Refrigerator', 150, 10], ['Rice cooker', 600, 1], ['Electric kettle', 1500, 0.3], ['Microwave oven', 1000, 0.3],
-    ['Flat iron', 1000, 0.5], ['Washing machine', 400, 1], ['Water pump', 750, 1], ['Aircon 1.0 HP (inverter)', 700, 8],
-    ['Aircon 1.0 HP (non-inverter)', 900, 8], ['Aircon 1.5 HP', 1300, 8], ['Laptop', 60, 6], ['Desktop computer', 200, 6],
-    ['Phone charger', 10, 3], ['Wi-Fi router', 10, 24], ['Electric stove (1 burner)', 1200, 1], ['Hair dryer', 1200, 0.2]
-  ];
-
   let rates = [];
   let ratesAt = 0;
   let mode = 'meter';
-  let appliances = [];
 
   // -------------------------------------------------- saved inputs (this phone only)
   function save() {
     try {
       localStorage.setItem(STORE, JSON.stringify({
         mode, prev: $('estPrev').value, curr: $('estCurr').value, mult: $('estMult').value, kwh: $('estKwh').value,
-        days: $('estDays').value, cls: $('estClass').value, appliances
+        cls: $('estClass').value
       }));
     } catch { /* private mode: fine */ }
   }
   function restore() {
     let data = null;
     try { data = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { data = null; }
-    appliances = Array.isArray(data && data.appliances) && data.appliances.length ? data.appliances
-      : [['LED bulb', 10, 4, 6], ['Electric fan', 60, 2, 8], ['Television (LED 32")', 60, 1, 5], ['Refrigerator', 150, 1, 10]]
-        .map(([name, watts, qty, hours]) => ({ name, watts, qty, hours }));
     if (!data) return;
     $('estPrev').value = data.prev || '';
     $('estCurr').value = data.curr || '';
     $('estMult').value = data.mult || '1';
     $('estKwh').value = data.kwh || '';
-    $('estDays').value = data.days || '30';
-    if (data.mode) setMode(data.mode, false);
+    // Only Meter reading and kWh remain (any other saved choice opens Meter reading).
+    if (data.mode === 'meter' || data.mode === 'kwh') setMode(data.mode, false);
     $('estClass').dataset.saved = data.cls || '';
   }
 
@@ -94,72 +81,8 @@
       tab.setAttribute('aria-selected', String(on));
     });
     document.querySelectorAll('.est-mode').forEach((section) => section.classList.toggle('hidden', section.dataset.mode !== next));
-    if (next === 'appliances') renderAppliances();
     calculate();
     if (store) save();
-  }
-
-  // -------------------------------------------------- appliances
-  function applianceKwh(a, days) {
-    return (Number(a.watts) || 0) * (Number(a.qty) || 0) * (Number(a.hours) || 0) * days / 1000;
-  }
-
-  function renderAppliances() {
-    const box = $('estAppliances');
-    const days = Math.min(31, Math.max(1, Number($('estDays').value) || 30));
-    box.replaceChildren(...appliances.map((a, index) => {
-      const row = document.createElement('div');
-      row.className = 'est-app';
-      const name = document.createElement('select');
-      name.setAttribute('aria-label', 'Appliance');
-      name.append(...APPLIANCES.map(([n]) => new Option(n, n)), new Option('Other', 'Other'));
-      name.value = APPLIANCES.some(([n]) => n === a.name) ? a.name : 'Other';
-      const field = (label, key, step, max) => {
-        const wrap = document.createElement('label');
-        wrap.className = 'est-app-field';
-        const span = document.createElement('span');
-        span.textContent = label;
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.inputMode = 'decimal';
-        input.min = '0';
-        input.step = step;
-        if (max) input.max = max;
-        input.value = a[key];
-        input.addEventListener('input', () => { a[key] = input.value; updateRowKwh(); calculate(); save(); });
-        wrap.append(span, input);
-        return { wrap, input };
-      };
-      const watts = field('Watts', 'watts', '1');
-      const qty = field('How many', 'qty', '1');
-      const hours = field('Hours / day', 'hours', '0.1', '24');
-      const kwh = document.createElement('span');
-      kwh.className = 'est-app-kwh';
-      const updateRowKwh = () => { kwh.textContent = `${applianceKwh(a, days).toFixed(1)} kWh / month`; };
-      updateRowKwh();
-      name.addEventListener('change', () => {
-        const preset = APPLIANCES.find(([n]) => n === name.value);
-        a.name = name.value;
-        if (preset) { a.watts = preset[1]; a.hours = preset[2]; watts.input.value = preset[1]; hours.input.value = preset[2]; }
-        updateRowKwh();
-        calculate();
-        save();
-      });
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'est-app-remove';
-      remove.setAttribute('aria-label', `Remove ${a.name}`);
-      remove.textContent = '×';
-      remove.addEventListener('click', () => { appliances.splice(index, 1); renderAppliances(); calculate(); save(); });
-      const top = document.createElement('div');
-      top.className = 'est-app-top';
-      top.append(name, remove);
-      const fields = document.createElement('div');
-      fields.className = 'est-app-fields';
-      fields.append(watts.wrap, qty.wrap, hours.wrap);
-      row.append(top, fields, kwh);
-      return row;
-    }));
   }
 
   // -------------------------------------------------- the calculation
@@ -174,13 +97,8 @@
       const span = `${Number(curr).toLocaleString('en-PH')} − ${Number(prev).toLocaleString('en-PH')}`;
       return { kwh: diff * mult, note: mult > 1 ? `(${span}) × ${mult}` : span };
     }
-    if (mode === 'kwh') {
-      const v = $('estKwh').value;
-      return v === '' ? { kwh: null, note: 'Enter the kWh you used.' } : { kwh: Math.max(0, Number(v)), note: '' };
-    }
-    const days = Math.min(31, Math.max(1, Number($('estDays').value) || 30));
-    const total = appliances.reduce((sum, a) => sum + applianceKwh(a, days), 0);
-    return appliances.length ? { kwh: total, note: `${appliances.length} appliance${appliances.length === 1 ? '' : 's'} for ${days} days` } : { kwh: null, note: 'Add at least one appliance.' };
+    const v = $('estKwh').value;
+    return v === '' ? { kwh: null, note: 'Enter the kWh you used.' } : { kwh: Math.max(0, Number(v)), note: '' };
   }
 
   function row(label, value, strong = false) {
@@ -257,8 +175,7 @@
       const diff = kwh - Number(last.consumption_kwh);
       const pct = Math.round((diff / Number(last.consumption_kwh)) * 100);
       compare.textContent = `Your ${last.billing_month} bill: ${Number(last.consumption_kwh)} kWh, ${peso(last.total_amount)}. `
-        + (Math.abs(pct) < 1 ? 'This estimate uses about the same energy.' : `This estimate uses ${Math.abs(pct)}% ${pct > 0 ? 'more' : 'less'} energy.`)
-        + (pct > 15 && mode === 'appliances' ? ' Aircon and heating appliances usually make the biggest difference.' : '');
+        + (Math.abs(pct) < 1 ? 'This estimate uses about the same energy.' : `This estimate uses ${Math.abs(pct)}% ${pct > 0 ? 'more' : 'less'} energy.`);
       compare.classList.remove('hidden');
     } else {
       compare.classList.add('hidden');
@@ -268,16 +185,7 @@
   // -------------------------------------------------- wiring
   document.querySelectorAll('.est-tab').forEach((tab) => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
   ['estPrev', 'estCurr', 'estMult', 'estKwh'].forEach((id) => $(id).addEventListener('input', () => { calculate(); save(); }));
-  $('estDays').addEventListener('input', () => { renderAppliances(); calculate(); save(); });
   $('estClass').addEventListener('change', () => { calculate(); save(); });
-  $('estAddAppliance').addEventListener('click', () => {
-    appliances.push({ name: 'Electric fan', watts: 60, qty: 1, hours: 8 });
-    renderAppliances();
-    calculate();
-    save();
-    const last = $('estAppliances').lastElementChild;
-    if (last) last.querySelector('select').focus();
-  });
   document.querySelectorAll('[data-screen="estimatorScreen"]').forEach((button) => button.addEventListener('click', () => {
     const bills = (typeof currentCustomer !== 'undefined' && currentCustomer && currentCustomer.bills) || [];
     const last = bills.find((b) => b.consumption_kwh != null);
@@ -288,7 +196,6 @@
   }));
 
   restore();
-  renderAppliances();
   calculate();
   void loadRates(true);
 

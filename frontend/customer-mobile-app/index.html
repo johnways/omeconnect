@@ -86,7 +86,7 @@
             <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" /></svg><div><strong>Never miss a due date</strong><span>Get reminders before and on your due date.</span></div></li>
             <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12z" /></svg><div><strong>Power outage alerts</strong><span>Receive OMECO advisories and power interruption notices for your area.</span></div></li>
             <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4zM8 9h8M8 12h5" /></svg><div><strong>Report concerns</strong><span>Submit a concern or report a power outage, then track its status.</span></div></li>
-            <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" /></svg><div><strong>Estimate your bill</strong><span>Turn your meter reading or appliances into an expected amount.</span></div></li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01" /></svg><div><strong>Estimate your bill</strong><span>Turn your meter reading or kWh into an expected amount.</span></div></li>
             <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7M5 10v10h5v-6h4v6h5V10" /></svg><div><strong>Manage your accounts</strong><span>Link more than one OMECO account, such as your house and store.</span></div></li>
           </ul>
           <h4>How to get started</h4>
@@ -394,7 +394,7 @@
           <span class="estimate-promo-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM8 6h8v4H8zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" /></svg></span>
           <span class="estimate-promo-text">
             <strong>Estimate my bill</strong>
-            <span>Convert your meter reading or appliances to kWh and see the expected amount.</span>
+            <span>Convert your meter reading or kWh into the expected amount.</span>
           </span>
           <span class="estimate-promo-go" aria-hidden="true">›</span>
         </button>
@@ -526,7 +526,6 @@
         <div class="est-tabs" role="tablist" aria-label="How to estimate">
           <button type="button" role="tab" class="est-tab active" data-mode="meter" aria-selected="true">Meter reading</button>
           <button type="button" role="tab" class="est-tab" data-mode="kwh" aria-selected="false">kWh</button>
-          <button type="button" role="tab" class="est-tab" data-mode="appliances" aria-selected="false">Appliances</button>
         </div>
 
         <section class="card form-card est-mode" data-mode="meter">
@@ -552,14 +551,6 @@
           <p id="estKwhHint" class="field-hint"></p>
         </section>
 
-        <section class="card form-card est-mode hidden" data-mode="appliances">
-          <p class="muted-copy">Add the appliances you use. Watts are on the sticker or box; hours are how long it runs each day.</p>
-          <div id="estAppliances" class="est-appliances"></div>
-          <button id="estAddAppliance" class="secondary-btn" type="button">+ Add appliance</button>
-          <label>Days in the billing month
-            <input id="estDays" type="number" inputmode="numeric" min="1" max="31" value="30" />
-          </label>
-        </section>
 
         <section class="card est-result" aria-live="polite">
           <span class="est-label">Estimated bill</span>
