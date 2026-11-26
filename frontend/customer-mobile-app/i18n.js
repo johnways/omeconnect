@@ -9,6 +9,7 @@
   const FIL = {
     // Sign-in & accounts
     'Sign in to your account': 'Mag-sign in sa iyong account',
+    'Show password': 'Ipakita ang password',
     'View your bills, get outage alerts and report concerns.': 'Tingnan ang iyong bill, tumanggap ng abiso sa brownout, at mag-ulat ng problema.',
     'Keep me signed in on this device': 'Manatiling naka-sign in sa device na ito',
     'Sign in': 'Mag-sign in',

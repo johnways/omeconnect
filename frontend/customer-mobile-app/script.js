@@ -99,6 +99,15 @@ function setScreen(screenId) {
   document.getElementById('aiFab').classList.toggle('hidden', signedOut || screenId === 'aiScreen');
 
   if (screenId === 'complaintsScreen' && typeof loadConcerns === 'function') void loadConcerns();
+  // "Change password" (Profile) reuses the reset screen. When signed in, its
+  // Back arrow must return to Profile: pointing at the sign-in screen signs
+  // the customer out (see the navButtons handler).
+  if (screenId === 'forgotScreen') {
+    const back = document.querySelector('#forgotScreen .back-btn');
+    if (back) back.dataset.screen = currentCustomer ? 'profileScreen' : 'loginScreen';
+    const resetEmail = document.getElementById('resetEmail');
+    if (currentCustomer && currentCustomer.email && resetEmail && !resetEmail.value) resetEmail.value = currentCustomer.email;
+  }
   window.scrollTo({ top: 0 });
 }
 
