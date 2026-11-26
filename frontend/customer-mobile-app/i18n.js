@@ -89,6 +89,8 @@
     'No bill': 'Walang bill',
     'Unpaid': 'Hindi pa bayad',
     'Paid': 'Bayad na',
+    'Due today': 'Takdang petsa ngayon',
+    'Due tomorrow': 'Takdang petsa bukas',
     // Bill estimator
     'Estimate my bill': 'Tantyahin ang aking bill',
     'Estimate my next bill': 'Tantyahin ang susunod kong bill',
@@ -272,6 +274,9 @@
 
   // Text with changing parts (dates, amounts).
   const PATTERNS = [
+    // Due-date chip on Home (must come before the general "Due ..." rule)
+    [/^Overdue · (\d+) days?$/, 'Lampas na · $1 araw'],
+    [/^Due in (\d+) days$/, 'Takdang petsa sa loob ng $1 araw'],
     [/^Due date: (.+)$/, 'Takdang petsa: $1'],
     [/^Due (.+)$/, 'Takdang petsa: $1'],
     [/^Consumption: (.+)$/, 'Konsumo: $1']

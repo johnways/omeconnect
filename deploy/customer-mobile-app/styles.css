@@ -1459,3 +1459,48 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
   border-radius: var(--radius-sm); background: var(--green-50); color: var(--text-2); font-size: 0.8rem; line-height: 1.45;
 }
 .about-note svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--green-600); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
+
+/* Due-date status chip on Home (Paid / Due in N days / Due today / Overdue) */
+.due-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.hero-amount .due-row small { color: var(--text-2); }
+.due-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 0.74rem; font-weight: 700; line-height: 1.4; white-space: nowrap;
+  animation: chip-in 0.35s cubic-bezier(.2, .9, .3, 1.2);
+}
+.due-chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.due-chip.ok { background: var(--green-50); color: var(--green-600); }
+.due-chip.soon { background: var(--amber-50); color: #9a6200; }
+.due-chip.late { background: var(--red-50); color: var(--red-600); }
+.due-chip.late::before { animation: dot-pulse 1.6s ease-in-out infinite; }
+:root[data-theme="dark"] .due-chip.soon { color: #fbbf24; }
+:root[data-theme="dark"] .due-chip.late { color: #f87171; }
+@keyframes chip-in { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
+@keyframes dot-pulse { 50% { opacity: 0.35; } }
+
+/* Lists slide in gently when a screen is opened (bills, alerts, advisories, concerns) */
+.app-screen.entering :is(.bill-list, .list-box, .announce-list, .concern-list) > * {
+  animation: item-in 0.38s cubic-bezier(.2, .8, .2, 1) both;
+}
+.app-screen.entering :is(.bill-list, .list-box, .announce-list, .concern-list) > :nth-child(2) { animation-delay: 0.04s; }
+.app-screen.entering :is(.bill-list, .list-box, .announce-list, .concern-list) > :nth-child(3) { animation-delay: 0.08s; }
+.app-screen.entering :is(.bill-list, .list-box, .announce-list, .concern-list) > :nth-child(4) { animation-delay: 0.12s; }
+.app-screen.entering :is(.bill-list, .list-box, .announce-list, .concern-list) > :nth-child(5) { animation-delay: 0.16s; }
+.app-screen.entering :is(.bill-list, .list-box, .announce-list, .concern-list) > :nth-child(n+6) { animation-delay: 0.2s; }
+@keyframes item-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Friendlier empty states: soft icon above the message */
+.empty-state { display: grid; justify-items: center; gap: 10px; padding: 26px 18px; }
+.empty-state::before {
+  content: ""; width: 44px; height: 44px; border-radius: 50%;
+  background-color: var(--blue-600); opacity: 0.85;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 13h4l2 3h4l2-3h4'/%3E%3Cpath d='M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5z'/%3E%3C/svg%3E") center / 26px no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 13h4l2 3h4l2-3h4'/%3E%3Cpath d='M5.5 6.5 4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5l-1.5-6.5A2 2 0 0 0 16.6 5H7.4a2 2 0 0 0-1.9 1.5z'/%3E%3C/svg%3E") center / 26px no-repeat;
+}
+
+/* Respect "reduce motion": no slide-ins, chip pop or pulsing dot */
+@media (prefers-reduced-motion: reduce) {
+  .app-screen.entering :is(.bill-list, .list-box, .announce-list, .concern-list) > *,
+  .due-chip, .due-chip.late::before { animation: none !important; }
+}

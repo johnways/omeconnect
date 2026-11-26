@@ -75,6 +75,31 @@ function formatCurrency(value) {
   }).format(Number(value));
 }
 
+// Amounts count up smoothly to a new value (only when it changes).
+const reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+function countUpCurrency(element, value) {
+  if (!element) return;
+  const target = value === null || value === undefined || value === '' ? null : Number(value);
+  const previous = element.dataset.amount === undefined || element.dataset.amount === '' ? null : Number(element.dataset.amount);
+  element.dataset.amount = target === null || Number.isNaN(target) ? '' : String(target);
+  if (target === null || Number.isNaN(target)) { element.textContent = formatCurrency(null); return; }
+  const from = previous === null || Number.isNaN(previous) ? 0 : previous;
+  if (from === target || reduceMotion.matches || document.visibilityState !== 'visible') {
+    element.textContent = formatCurrency(target);
+    return;
+  }
+  const start = performance.now();
+  const duration = 650;
+  const step = (now) => {
+    if (element.dataset.amount !== String(target)) return; // a newer value took over
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    element.textContent = formatCurrency(from + (target - from) * eased);
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 function formatDate(value) {
   if (!value) return 'Not available';
   const date = new Date(`${value}T00:00:00`);
@@ -93,7 +118,14 @@ function formatDateTime(value) {
 
 function setScreen(screenId) {
   screens.forEach((screen) => {
+    const opening = screen.id === screenId && !screen.classList.contains('active');
     screen.classList.toggle('active', screen.id === screenId);
+    // Lists slide in only when a screen is opened, not on every refresh.
+    if (opening) {
+      screen.classList.add('entering');
+      clearTimeout(screen.enteringTimer);
+      screen.enteringTimer = setTimeout(() => screen.classList.remove('entering'), 900);
+    }
   });
 
   document.querySelectorAll('.bottom-nav .nav-item').forEach((item) => {
@@ -328,6 +360,34 @@ document.getElementById('photoInput').addEventListener('change', (event) => {
 document.getElementById('removePhotoButton').addEventListener('click', () => void removeProfilePhoto());
 
 // Account card, balances and profile fields (safe to call on every refresh).
+// Colored chip beside the due date: Paid / Due in N days / Due today / Overdue.
+function renderDueChip(bill) {
+  const chip = document.getElementById('heroDueChip');
+  if (!chip) return;
+  const paid = bill && (String(bill.status || '').toLowerCase() === 'paid' || Number(bill.outstanding_balance) === 0);
+  const due = bill && bill.due_date ? new Date(`${bill.due_date}T00:00:00`) : null;
+  if (!bill || (!paid && (!due || Number.isNaN(due.getTime())))) {
+    chip.classList.add('hidden');
+    return;
+  }
+  let text;
+  let tone;
+  if (paid) {
+    text = 'Paid';
+    tone = 'ok';
+  } else {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((due - today) / 86400000);
+    if (days < 0) { text = `Overdue · ${-days} ${-days === 1 ? 'day' : 'days'}`; tone = 'late'; }
+    else if (days === 0) { text = 'Due today'; tone = 'soon'; }
+    else if (days === 1) { text = 'Due tomorrow'; tone = 'soon'; }
+    else { text = `Due in ${days} days`; tone = days <= 3 ? 'soon' : 'ok'; }
+  }
+  chip.textContent = text;
+  chip.className = `due-chip ${tone}`;
+}
+
 function renderAccountSummary() {
   const account = currentCustomer.account;
   const latestBill = currentCustomer.bills[0];
@@ -341,29 +401,29 @@ function renderAccountSummary() {
     hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   document.getElementById('heroDueDate').textContent =
     latestBill && latestBill.due_date ? `Due ${formatDate(latestBill.due_date)}` : 'No bill due';
+  renderDueChip(latestBill);
   document.getElementById('accountLabel').textContent =
     appConfig.demoMode ? 'Demo account' : (account ? 'Verified account' : 'Not linked yet');
   renderAvatars();
   document.getElementById('demoDashboardBanner').classList.toggle('hidden', !appConfig.demoMode);
   document.getElementById('maskedAccountNumber').textContent =
     accountNumber ? `•••• ${accountNumber.slice(-5)}` : 'Account pending verification';
-  document.getElementById('currentBillAmount').textContent = formatCurrency(outstanding);
-  document.getElementById('dashboardBalance').textContent = formatCurrency(outstanding);
+  countUpCurrency(document.getElementById('currentBillAmount'), outstanding);
+  countUpCurrency(document.getElementById('dashboardBalance'), outstanding);
   document.getElementById('dashboardUsage').textContent =
     latestBill && latestBill.consumption_kwh !== null
       ? `${latestBill.consumption_kwh} kWh`
       : '—';
   document.getElementById('dashboardStatus').textContent =
     latestBill ? (latestBill.status || 'Available') : 'No bill';
-  document.getElementById('quickBillAmount').textContent = formatCurrency(outstanding);
+  countUpCurrency(document.getElementById('quickBillAmount'), outstanding);
   document.getElementById('billDueSummary').textContent =
     latestBill && latestBill.due_date ? `Due date: ${formatDate(latestBill.due_date)}` : 'Due date: —';
   // Total still owed across all unpaid bills (not a placeholder).
   const unpaidTotal = currentCustomer.bills
     .filter((bill) => String(bill.status || '').toLowerCase() !== 'paid')
     .reduce((sum, bill) => sum + (Number(bill.outstanding_balance) || 0), 0);
-  document.getElementById('billOutstandingTotal').textContent =
-    currentCustomer.bills.length ? formatCurrency(unpaidTotal) : formatCurrency(null);
+  countUpCurrency(document.getElementById('billOutstandingTotal'), currentCustomer.bills.length ? unpaidTotal : null);
   // Customers can link more than one OMECO account (house, store, …).
   document.getElementById('verifyAccountForm').classList.remove('hidden');
   document.getElementById('verifyAccountTitle').textContent = account ? 'Link another OMECO account' : 'Link your OMECO account';
