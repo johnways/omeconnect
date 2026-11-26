@@ -97,6 +97,8 @@
           </ol>
           <p class="about-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V8a4 4 0 0 1 8 0v3" /></svg><span>Your information is protected. Only you can see your bills, and OMECO verifies every account before showing any billing details.</span></p>
         </section>
+        <section class="card contact-card" data-contact-card></section>
+
         <section id="getAppCard" class="card get-app-card" aria-labelledby="getAppTitle">
           <div class="get-app-head">
             <img src="/icons/icon-192.png" alt="" width="48" height="48" />
@@ -337,11 +339,16 @@
           </div>
           <p id="powerText" class="power-text"></p>
           <div id="powerAdvisories" class="power-advisories"></div>
+          <div id="outageBoard" class="outage-board" aria-live="polite"></div>
           <div class="power-actions">
             <button id="reportOutageButton" class="secondary-btn power-report" type="button">Report no power</button>
             <span id="powerNote" class="power-note"></span>
           </div>
         </section>
+
+        <section id="scheduleCard" class="card schedule-card hidden" aria-live="polite"></section>
+
+        <section id="insightCard" class="card insight-card hidden"></section>
         <p id="demoDashboardBanner" class="demo-note hidden">DEMO DATA — Sample values only; not OMECO customer or billing data.</p>
 
         <div class="metrics-grid">
@@ -419,6 +426,8 @@
         <button class="secondary-btn estimate-link" type="button" data-screen="estimatorScreen">Estimate my next bill</button>
 
         <div id="billList" class="bill-list"></div>
+
+        <section id="paymentHistory" class="card payment-history hidden" aria-live="polite"></section>
 
         <form id="meterForm" class="card form-card meter-card hidden" novalidate>
           <h3>Send your meter reading</h3>
@@ -674,6 +683,10 @@
           <p id="privacyStatus" class="photo-status hidden" role="status"></p>
         </div>
 
+        <section id="textSizeCard" class="card text-size-card"></section>
+
+        <section class="card contact-card" data-contact-card></section>
+
         <div class="settings-list">
           <button class="setting-item" id="logoutButton">Logout</button>
           <button class="setting-item" data-screen="forgotScreen">Change password</button>
@@ -719,7 +732,9 @@
     <script src="script.js"></script>
     <script src="statement.js"></script>
     <script src="features.js"></script>
+    <script src="billing-math.js"></script>
     <script src="estimator.js"></script>
+    <script src="insights.js"></script>
     <script src="i18n.js"></script>
   </body>
 </html>

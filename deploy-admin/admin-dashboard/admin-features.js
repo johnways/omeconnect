@@ -247,6 +247,8 @@
       kpi('Overdue now', String(r.concerns_open_overdue), 'open past target', r.concerns_open_overdue ? 'bad' : 'good'),
       kpi('Bills paid', pct(r.bills_paid, r.bills_issued), `${r.bills_paid} of ${r.bills_issued} bills`),
       kpi('Still unpaid', ctx().peso(r.outstanding_amount), `of ${ctx().peso(r.billed_amount)} billed`),
+      kpi('Collected', ctx().peso(r.collected_amount || 0), 'payments received in this period', 'good'),
+      kpi('Overdue accounts', String(r.overdue_accounts || 0), `${ctx().peso(r.overdue_amount || 0)} past due`, r.overdue_accounts ? 'warn' : 'good'),
       kpi('New customers', String(r.new_customers), 'signed up in the app'),
       kpi('Waiting for staff', String((r.pending_verifications || 0) + (r.pending_meter_readings || 0)),
         `${r.pending_verifications} verifications · ${r.pending_meter_readings} readings`),
@@ -259,6 +261,7 @@
         el('span', { class: 'bar-value' }, String(n)))) : [el('p', { class: 'muted small' }, empty)]));
     };
     bars('reportAreaBars', r.by_area, 'No concerns in this period.');
+    bars('reportOutageBars', r.outages_by_barangay, 'No outage reports in this period.');
     bars('reportSignupBars', r.signups_by_month, 'No sign-ups in the last 12 months.');
   }
   $('reportPeriod').addEventListener('change', () => void loadKpis());

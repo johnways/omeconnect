@@ -32,6 +32,15 @@ push notifications and Digital Asset Links depend on these addresses, so keep th
 
 Backend: **Supabase** (Auth with email + Google, PostgreSQL with Row Level Security).
 
+## Operations, compliance and tests
+
+| Topic | Document |
+|---|---|
+| Monitoring, backups and restore drill, cost plan, staging, releasing | `docs/OPERATIONS_RUNBOOK.md` |
+| Data Privacy Act (RA 10173) compliance pack | `docs/DATA_PRIVACY_COMPLIANCE.md` |
+| Steps that need the project owner (accounts, keys, legal) | `docs/ACTION_GUIDE_FOR_YOU.md` |
+| Automated tests | `node --test tests/*.test.mjs` · database checks: `tests/database_checks.sql` |
+
 ## Live sites (Vercel) — customer and admin are SEPARATE
 | Site | Vercel project | Root Directory | Address |
 |---|---|---|---|
@@ -96,6 +105,9 @@ Customer app: http://localhost:8080/ · Admin dashboard: http://localhost:8081/ 
 
 Without Docker (development): `python tools/serve_local.py customer` → http://localhost:5500 and
 `python tools/serve_local.py admin` → http://localhost:5501 (both this computer only).
+
+This repository does not have a `package.json` and does not use npm. If npm reports that it cannot
+open `package.json`, use the Python commands above instead (run them from the repository root).
 
 ## Live Site
 

@@ -363,13 +363,13 @@
       const billsPromise = account
         ? restRequest('electricity_bills', {
             customer_account_id: `eq.${account.id}`,
-            select: 'id,billing_month,due_date,total_amount,outstanding_balance,consumption_kwh,status,created_at,charges',
+            select: 'id,billing_month,due_date,total_amount,outstanding_balance,consumption_kwh,status,created_at,charges,payment_reference,period_from,period_to',
             order: 'created_at.desc'
           }, accessToken)
         : Promise.resolve([]);
 
       const announcementsPromise = restRequest('announcements', {
-        select: 'id,title,content,category,affected_area,is_urgent,created_at',
+        select: 'id,title,content,category,affected_area,is_urgent,created_at,published_at,starts_at,ends_at',
         is_published: 'eq.true',
         order: 'created_at.desc',
         limit: '20'

@@ -1,0 +1,46 @@
+# Uptime monitor: checks the live OMECOnnect services every 30 minutes.
+# If a check fails, the run fails and GitHub emails the repository owner
+# (GitHub > Settings > Notifications > Actions: "Send notifications for failed workflows").
+# Run it by hand any time: GitHub > Actions > Uptime monitor > Run workflow.
+name: Uptime monitor
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uptime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the customer site, the Android app link and the database
+        run: |
+          set -u
+          SITE="https://omeconnect.vercel.app"
+          # Public project address and public (anon) key, as used by the web app itself.
+          SUPABASE_URL=$(grep -o "https://[a-z0-9]*\.supabase\.co" frontend/customer-mobile-app/config.js | head -1)
+          ANON_KEY=$(grep -o "eyJ[A-Za-z0-9._-]*" frontend/customer-mobile-app/config.js | head -1)
+          failed=0
+          check() { # name, expected status, curl args...
+            name="$1"; want="$2"; shift 2
+            got=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 --retry 2 --retry-delay 5 "$@")
+            if [ "$got" = "$want" ]; then echo "OK    $name ($got)"; else echo "FAIL  $name (got $got, expected $want)"; failed=1; fi
+          }
+          check "Customer app page"         200 "$SITE/customer-mobile-app/index.html"
+          check "App version file"          200 "$SITE/version.json"
+          check "Notifications service worker" 200 "$SITE/sw.js"
+          check "Android app link"          200 "$SITE/.well-known/assetlinks.json"
+          check "Android app download"      200 -I "$SITE/downloads/OMECOnnect.apk"
+          check "Database API"              200 -H "apikey: $ANON_KEY" "$SUPABASE_URL/rest/v1/service_areas?select=municipality&limit=1"
+          check "Sign-in service"           200 -H "apikey: $ANON_KEY" "$SUPABASE_URL/auth/v1/health"
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::OMECOnnect has a problem - see the FAIL lines above."
+            exit 1
+          fi
+          echo "All OMECOnnect services are up."

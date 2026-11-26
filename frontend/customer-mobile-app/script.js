@@ -402,6 +402,8 @@ function renderAccountSummary() {
   document.getElementById('heroDueDate').textContent =
     latestBill && latestBill.due_date ? `Due ${formatDate(latestBill.due_date)}` : 'No bill due';
   renderDueChip(latestBill);
+  // Let add-on cards (insights.js) refresh with the latest data.
+  setTimeout(() => document.dispatchEvent(new CustomEvent('omeco:data')), 0);
   document.getElementById('accountLabel').textContent =
     appConfig.demoMode ? 'Demo account' : (account ? 'Verified account' : 'Not linked yet');
   renderAvatars();

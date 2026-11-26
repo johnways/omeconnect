@@ -764,3 +764,22 @@ body.bell-open { overflow: hidden; }
 .modal-body .soa-viewer { background: #e7ebf1; margin: -4px; padding: 12px 8px; border-radius: 12px; max-height: 70vh; overflow: auto; }
 [data-theme="dark"] .modal-body .soa-viewer { background: #0d1627; }
 [data-theme="dark"] .sched-table select, [data-theme="dark"] .sched-table input { background: #0d1627; border-color: #31425f; color: var(--text); }
+
+/* Quick replies in the concern Update window */
+.quick-replies { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
+.quick-label { width: 100%; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.quick-chip {
+  padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line, #d9e2ef); background: var(--surface, #fff); color: var(--text, #1d2433);
+  font-size: 0.8rem; font-weight: 600; transition: border-color .15s ease, background-color .15s ease, transform .1s ease;
+}
+.quick-chip:hover { border-color: var(--primary, #0b5ed7); background: rgba(11, 94, 215, 0.08); }
+.quick-chip:active { transform: scale(0.96); }
+.quick-chip:focus-visible { outline: 2px solid var(--primary, #0b5ed7); outline-offset: 2px; }
+
+/* Directions link styled like the other small buttons */
+a.btn-sm { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Outage window shown under a scheduled announcement */
+.schedule-line { color: #9a6200; font-weight: 600; }
+:root[data-theme="dark"] .schedule-line { color: #fbbf24; }

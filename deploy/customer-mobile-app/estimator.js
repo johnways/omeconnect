@@ -213,19 +213,7 @@
 
     // Full statement schedule (same math as the database's compute_bill()).
     if (Array.isArray(rate.schedule) && rate.schedule.length) {
-      const sums = {};
-      rate.schedule.filter((l) => l.per !== 'pct').forEach((l) => {
-        const amt = Math.round((l.per === 'month' ? Number(l.rate) : kwh * Number(l.rate)) * 100) / 100;
-        sums[l.group] = (sums[l.group] || 0) + amt;
-      });
-      const groups = new Map();
-      let sTotal = 0;
-      rate.schedule.forEach((l) => {
-        const amt = Math.round((l.per === 'month' ? Number(l.rate) : l.per === 'pct' ? (sums[l.of] || 0) * Number(l.rate) : kwh * Number(l.rate)) * 100) / 100;
-        sTotal += amt;
-        groups.set(l.group, (groups.get(l.group) || 0) + amt);
-      });
-      sTotal = Math.round(sTotal * 100) / 100;
+      const { total: sTotal, groups } = window.OMECO_BILLING.scheduleBreakdown(rate.schedule, kwh);
       $('estTotal').textContent = peso(sTotal);
       const groupRows = [];
       groups.forEach((amount, group) => groupRows.push(...row(group.charAt(0) + group.slice(1).toLowerCase(), peso(amount))));

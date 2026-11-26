@@ -568,6 +568,7 @@
 
   window.OMECO_FEATURES = {
     openNotification,
+    openStatement,
     onDashboard() {
       renderAccountSwitch();
       renderMeterCard();

@@ -88,6 +88,9 @@ jobs:
           print("All element ids found.")
           PY
 
+      - name: Automated tests (billing math = database, statement barcode)
+        run: node --test tests/*.test.mjs
+
       - name: Build the two live sites
         run: python tools/build_deploy.py
 

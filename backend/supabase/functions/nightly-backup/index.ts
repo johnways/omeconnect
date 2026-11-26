@@ -15,6 +15,9 @@ const TABLES = [
   'users', 'customer_accounts', 'electricity_bills', 'payments', 'meter_readings',
   'account_verification_requests', 'complaints', 'complaint_status_history',
   'announcements', 'admin_accounts', 'audit_logs', 'service_areas', 'app_settings',
+  // Added in the restore drill (Nov 2026): the rate schedule every bill is computed
+  // from, and customers' notification history.
+  'electricity_rates', 'notifications',
 ];
 const CORS = {
   'Access-Control-Allow-Origin': '*',

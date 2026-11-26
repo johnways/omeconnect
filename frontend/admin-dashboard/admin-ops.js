@@ -519,6 +519,11 @@
       const assign = el('button', { type: 'button', class: 'btn-sm' }, c.assigned_to ? 'Reassign' : 'Assign');
       assign.addEventListener('click', () => void assignComplaint(c));
       const extras = [];
+      if (barangay && municipality) {
+        const place = `Barangay ${barangay}, ${municipality}, Occidental Mindoro`;
+        extras.push(el('a', { class: 'btn-sm', href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`,
+          target: '_blank', rel: 'noopener noreferrer', title: `Open ${place} in Google Maps` }, 'Directions'));
+      }
       if (c.photo_paths && c.photo_paths.length && window.adminFeatures) {
         const photos = el('button', { type: 'button', class: 'btn-sm' }, `Photos (${c.photo_paths.length})`);
         photos.addEventListener('click', () => window.adminFeatures.showPhotos(c.photo_paths, `Photos · ${c.tracking_number}`));
@@ -546,6 +551,15 @@
     $('complaintOverdueCount').classList.toggle('hidden', !overdue);
   }
 
+  // One-tap message templates for common concern updates: [label, message, suggested status].
+  const QUICK_REPLIES = [
+    ['Received', 'We received your report and our team is checking it. We will update you here.', 'under_review'],
+    ['Lineman scheduled', 'A lineman is scheduled to visit your area. Please keep your contact number available.', 'in_progress'],
+    ['Power restored', 'Power has been restored in your area. Thank you for your patience.', 'resolved'],
+    ['Bill reviewed', 'We reviewed your bill. The amount is correct based on your meter reading and the current rates.', 'resolved'],
+    ['Visit office', 'Please visit the nearest OMECO office with your latest bill so we can assist you in person.', 'in_progress']
+  ];
+
   async function updateComplaint(complaint) {
     if (!needLive()) return;
     const statusSelect = el('select', {}, ...Object.entries(COMPLAINT_STATUS).map(([value, [label]]) => {
@@ -560,7 +574,18 @@
       content: [
         el('p', { class: 'modal-summary' }, el('strong', {}, complaint.complaint_type), el('br'), complaint.description),
         field('Status', statusSelect),
-        field('Message to customer', note)
+        field('Message to customer', note),
+        el('div', { class: 'quick-replies' },
+          el('span', { class: 'quick-label' }, 'Quick replies'),
+          ...QUICK_REPLIES.map(([label, text, status]) => {
+            const chip = el('button', { type: 'button', class: 'quick-chip' }, label);
+            chip.addEventListener('click', () => {
+              note.value = text;
+              if (status && COMPLAINT_STATUS[status]) statusSelect.value = status;
+              note.focus();
+            });
+            return chip;
+          }))
       ],
       onConfirm: () => supabaseClient.rpc('update_complaint_status', {
         p_complaint_id: complaint.id, p_status: statusSelect.value, p_note: note.value.trim() || null
@@ -615,6 +640,11 @@
     renderAnnouncements();
   }
 
+  function fmtDateTime(value) {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+
   function renderAnnouncements() {
     const list = $('announcementAdminList');
     list.replaceChildren(...state.announcements.map((a) => {
@@ -625,7 +655,8 @@
       return el('article', { class: 'admin-item' },
         el('div', { class: 'admin-item-top' },
           el('div', {}, el('strong', {}, a.title),
-            el('span', { class: 'cell-sub' }, `${a.category || 'General'} · ${a.affected_area || 'All service areas'}`)),
+            el('span', { class: 'cell-sub' }, `${a.category || 'General'} · ${a.affected_area || 'All service areas'}`),
+            a.starts_at ? el('span', { class: 'cell-sub schedule-line' }, `Outage: ${fmtDateTime(a.starts_at)}${a.ends_at ? ` – ${fmtDateTime(a.ends_at)}` : ''}`) : null),
           el('div', { class: 'row-actions' },
             a.is_urgent ? badge('Urgent', 'warning') : null,
             a.is_published ? badge('Published', 'approved') : badge('Draft', 'neutral'))),
@@ -647,6 +678,11 @@
       return;
     }
     const publish = $('announcementPublish').checked;
+    // Optional outage window (local time in the form -> exact time saved).
+    const startsAt = $('announcementStarts').value ? new Date($('announcementStarts').value).toISOString() : null;
+    const endsAt = $('announcementEnds').value ? new Date($('announcementEnds').value).toISOString() : null;
+    if (endsAt && !startsAt) { toast('Set when the outage starts, too.', 'error'); return; }
+    if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) { toast('The outage must end after it starts.', 'error'); return; }
     const button = $('announcementSubmit');
     button.disabled = true;
     try {
@@ -657,7 +693,9 @@
         affected_area: $('announcementArea').value || null,
         is_urgent: $('announcementUrgent').checked,
         is_published: publish,
-        published_at: publish ? new Date().toISOString() : null
+        published_at: publish ? new Date().toISOString() : null,
+        starts_at: startsAt,
+        ends_at: endsAt
       }, token());
       $('announcementForm').reset();
       $('announcementPublish').checked = true;

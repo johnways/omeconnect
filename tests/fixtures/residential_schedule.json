@@ -1,0 +1,24 @@
+{
+  "note": "Live residential rate schedule (sample OMECO statement rates) and totals computed by the database function compute_bill(). Public rate data, no customer information.",
+  "schedule": [
+    {"per": "kwh", "name": "Generation Charge", "rate": 7.39, "group": "GENERATION"},
+    {"per": "kwh", "name": "System Loss Charge", "rate": 1.0272, "group": "GENERATION"},
+    {"per": "kwh", "name": "Distribution System Charge", "rate": 0.8956, "group": "DISTRIBUTION"},
+    {"per": "kwh", "name": "Supply System Charge", "rate": 0.6396, "group": "DISTRIBUTION"},
+    {"per": "month", "name": "Retail Metering Customer Charge", "rate": 5, "group": "DISTRIBUTION"},
+    {"per": "kwh", "name": "Metering System Charge", "rate": 1.1312, "group": "DISTRIBUTION"},
+    {"per": "kwh", "name": "SR Citizen Subsidy", "rate": 0.0004, "group": "OTHERS"},
+    {"per": "kwh", "name": "Lifeline Rate Subsidy", "rate": 0.0005, "group": "OTHERS"},
+    {"per": "kwh", "name": "Generation", "rate": 0.8306, "group": "VALUE ADDED TAX"},
+    {"per": "kwh", "name": "System Loss VAT", "rate": 0.1154, "group": "VALUE ADDED TAX"},
+    {"of": "DISTRIBUTION", "per": "pct", "name": "Distribution", "rate": 0.12, "group": "VALUE ADDED TAX"},
+    {"of": "OTHERS", "per": "pct", "name": "Others", "rate": 0.12, "group": "VALUE ADDED TAX"},
+    {"per": "kwh", "name": "Missionary", "rate": 0.1949, "group": "UNIVERSAL CHARGES"},
+    {"per": "kwh", "name": "Environmental", "rate": 0, "group": "UNIVERSAL CHARGES"},
+    {"per": "kwh", "name": "NPC Stranded Debts", "rate": 0.0428, "group": "UNIVERSAL CHARGES"},
+    {"per": "kwh", "name": "RED", "rate": 0.0044, "group": "UNIVERSAL CHARGES"},
+    {"per": "kwh", "name": "Business Tax", "rate": 0.0074, "group": "LOCAL TAX"},
+    {"per": "kwh", "name": "Real Property Tax", "rate": 0, "group": "LOCAL TAX"}
+  ],
+  "expected_totals": {"0": 5.60, "33": 421.40, "100": 1265.61, "173": 2185.41, "188": 2374.41, "1000": 12605.68}
+}

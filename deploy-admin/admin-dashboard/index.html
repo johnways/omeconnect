@@ -401,6 +401,15 @@
                     <select id="announcementArea"></select>
                   </label>
                 </div>
+                <div class="form-grid">
+                  <label>Outage starts (optional)
+                    <input type="datetime-local" id="announcementStarts" />
+                  </label>
+                  <label>Outage ends (optional)
+                    <input type="datetime-local" id="announcementEnds" />
+                  </label>
+                </div>
+                <p class="muted small">Set a time for scheduled interruptions: customers see it in their outage calendar until it ends.</p>
                 <label class="check"><input type="checkbox" id="announcementUrgent" /> Mark as urgent</label>
                 <label class="check"><input type="checkbox" id="announcementPublish" checked /> Publish now (customers are notified)</label>
                 <div class="form-actions">
@@ -660,6 +669,10 @@
               <div class="panel">
                 <div class="panel-header"><h3>Concerns by area</h3></div>
                 <div id="reportAreaBars" class="bar-list"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header"><h3>Outages by barangay</h3></div>
+                <div id="reportOutageBars" class="bar-list"></div>
               </div>
               <div class="panel">
                 <div class="panel-header"><h3>New customers per month</h3></div>
