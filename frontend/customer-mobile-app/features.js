@@ -512,7 +512,62 @@
     return wrap;
   }
 
+  // ------------------------------------------------------------ notification details
+  // Tapping a notification opens it in full: what it is about, when it came,
+  // the whole message, and a shortcut to the bill / concern / advisory.
+  const NOTE_KINDS = {
+    billing: { label: 'Bill', tone: 'blue' },
+    service: { label: 'OMECO advisory', tone: 'amber' },
+    complaint: { label: 'Concern update', tone: 'green' },
+    account: { label: 'Account', tone: 'violet' },
+    test: { label: 'Test notification', tone: 'neutral' }
+  };
+
+  function fullDateTime(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('en-PH', { dateStyle: 'long', timeStyle: 'short' });
+  }
+
+  function openNotification(note) {
+    if (!note) return;
+    const kind = NOTE_KINDS[note.type] || { label: 'Notification', tone: 'neutral' };
+    const announcement = note.announcement_id && currentCustomer
+      ? (currentCustomer.announcements || []).find((a) => String(a.id) === String(note.announcement_id))
+      : null;
+
+    let sheet = null;
+    const goTo = (action) => () => { if (sheet) sheet.close(); setTimeout(action, 190); };
+    const actions = [];
+    if (note.bill_id && (currentCustomer.bills || []).some((b) => String(b.id) === String(note.bill_id))) {
+      actions.push(el('button', { type: 'button', class: 'primary-btn', onclick: goTo(() => openBill(note.bill_id)) }, 'View bill details'));
+    }
+    if (note.type === 'complaint') {
+      actions.push(el('button', { type: 'button', class: 'primary-btn', onclick: goTo(() => setScreen('complaintsScreen')) }, 'Open my concerns'));
+    }
+    if (note.type === 'service' || announcement) {
+      actions.push(el('button', { type: 'button', class: 'secondary-btn', onclick: goTo(() => {
+        const list = document.getElementById('announcementList');
+        if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }) }, 'See all OMECO advisories'));
+    }
+
+    sheet = openSheet(kind.label, [
+      el('div', { class: 'note-detail-meta' },
+        el('span', { class: `note-kind ${kind.tone}`, text: kind.label }),
+        announcement && announcement.is_urgent ? el('span', { class: 'note-kind red', text: 'Urgent' }) : null,
+        announcement && announcement.category ? el('span', { class: 'note-kind neutral', text: announcement.category }) : null),
+      el('h4', { class: 'note-detail-title', text: note.title || 'OMECOnnect' }),
+      el('p', { class: 'note-detail-time', text: fullDateTime(note.created_at) }),
+      el('p', { class: 'note-detail-message', text: note.message || '' }),
+      actions.length ? el('div', { class: 'note-detail-actions' }, actions) : null
+    ]);
+    return sheet;
+  }
+
   window.OMECO_FEATURES = {
+    openNotification,
     onDashboard() {
       renderAccountSwitch();
       renderMeterCard();

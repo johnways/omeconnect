@@ -83,6 +83,14 @@ function formatDate(value) {
     : date.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+// Date and time of a notification, e.g. "Nov 20, 2026, 4:34 PM".
+function formatDateTime(value) {
+  const date = value ? new Date(value) : null;
+  return !date || Number.isNaN(date.getTime())
+    ? ''
+    : date.toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 function setScreen(screenId) {
   screens.forEach((screen) => {
     screen.classList.toggle('active', screen.id === screenId);
@@ -486,10 +494,11 @@ function renderNotifications() {
     const badgeClass = notification.is_read ? 'badge neutral' : 'badge warning';
     const badge = notification.is_read ? 'Read' : 'New';
     return `
-      <button type="button" class="list-item notification-item${notification.is_read ? '' : ' unread'}" data-notification-id="${escapeHtml(notification.id)}">
+      <button type="button" class="list-item notification-item${notification.is_read ? '' : ' unread'}" data-notification-id="${escapeHtml(notification.id)}" aria-haspopup="dialog">
         <div>
           <strong>${escapeHtml(notification.title)}</strong>
-          <small>${escapeHtml(notification.message)}</small>
+          <small class="note-preview">${escapeHtml(notification.message)}</small>
+          <span class="note-when">${escapeHtml(formatDateTime(notification.created_at))}</span>
         </div>
         <span class="${badgeClass}">${badge}</span>
       </button>
@@ -520,7 +529,11 @@ async function markNotificationsRead(notificationId) {
 if (notificationList) {
   notificationList.addEventListener('click', (event) => {
     const item = event.target.closest('[data-notification-id]');
-    if (item && item.classList.contains('unread')) void markNotificationsRead(item.dataset.notificationId);
+    if (!item) return;
+    // Open the whole message, then mark it as read.
+    const note = currentCustomer && currentCustomer.notifications.find((n) => String(n.id) === item.dataset.notificationId);
+    if (note && window.OMECO_FEATURES && window.OMECO_FEATURES.openNotification) window.OMECO_FEATURES.openNotification(note);
+    if (item.classList.contains('unread')) void markNotificationsRead(item.dataset.notificationId);
   });
 }
 document.getElementById('markNotificationsRead').addEventListener('click', () => void markNotificationsRead());
