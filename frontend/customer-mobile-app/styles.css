@@ -1432,3 +1432,30 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
 
 /* "Get the app" card on the sign-in screen */
 #loginScreen .get-app-card { margin: 18px 0 6px; }
+
+/* "What is OMECOnnect?" — information for new users on the sign-in screen */
+.about-card { margin-top: 18px; padding: 20px 18px; }
+.about-card h3 { margin: 0 0 8px; font-size: 1.08rem; font-weight: 800; color: var(--text); }
+.about-card h4 { margin: 18px 0 10px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--blue-600); }
+.about-lead { margin: 0 0 6px; font-size: 0.88rem; line-height: 1.55; color: var(--text-2); }
+.about-features { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.about-features li { display: flex; align-items: flex-start; gap: 12px; }
+.about-features svg {
+  flex: none; width: 36px; height: 36px; padding: 8px; box-sizing: border-box;
+  border-radius: 10px; background: var(--blue-50);
+  fill: none; stroke: var(--blue-600); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.about-features strong, .about-steps strong { display: block; font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.about-features span, .about-steps span { display: block; margin-top: 2px; font-size: 0.8rem; line-height: 1.45; color: var(--muted); }
+.about-steps { list-style: none; counter-reset: about-step; margin: 0; padding: 0; display: grid; gap: 12px; }
+.about-steps li { counter-increment: about-step; display: flex; align-items: flex-start; gap: 12px; }
+.about-steps li::before {
+  content: counter(about-step);
+  flex: none; width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--blue-600); color: #fff; font-size: 0.82rem; font-weight: 800;
+}
+.about-note {
+  display: flex; align-items: flex-start; gap: 10px; margin: 18px 0 0; padding: 12px;
+  border-radius: var(--radius-sm); background: var(--green-50); color: var(--text-2); font-size: 0.8rem; line-height: 1.45;
+}
+.about-note svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--green-600); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 1px; }
