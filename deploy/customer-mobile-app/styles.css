@@ -758,7 +758,7 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
   max-width: 480px;
   transform: translateX(-50%);
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   height: calc(var(--nav-h) + var(--safe-b));
   padding: 6px 6px calc(6px + var(--safe-b));
   background: rgba(255, 255, 255, 0.97);
