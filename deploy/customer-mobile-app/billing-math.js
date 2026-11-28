@@ -32,5 +32,24 @@
     return { total: round2(total), groups, lines };
   }
 
-  root.OMECO_BILLING = { scheduleBreakdown, round2 };
+  // Divides one meter's bill between the owner and the submeters, by kWh used.
+  //   total    : the whole bill for the main meter (₱)
+  //   mainKwh  : kWh on the main meter (current − previous)
+  //   subKwhs  : kWh of each submeter (each current − previous)
+  // Each submeter pays total × its kWh ÷ main kWh (rounded to centavos); the
+  // owner pays the rest, so the shares always add up to the bill exactly.
+  function splitBill(total, mainKwh, subKwhs) {
+    const bill = Number(total) || 0;
+    const main = Number(mainKwh) || 0;
+    const subs = subKwhs.map((k) => Math.max(0, Number(k) || 0));
+    const subTotal = subs.reduce((a, b) => a + b, 0);
+    if (main <= 0) return { error: 'no-usage' };
+    if (subTotal > main + 1e-9) return { error: 'subs-exceed', subTotal };
+    const shares = subs.map((kwh) => ({ kwh, amount: round2((bill * kwh) / main) }));
+    const ownerKwh = Math.round((main - subTotal) * 1000) / 1000;
+    const owner = { kwh: ownerKwh, amount: round2(bill - shares.reduce((a, s) => a + s.amount, 0)) };
+    return { shares, owner };
+  }
+
+  root.OMECO_BILLING = { scheduleBreakdown, splitBill, round2 };
 })(typeof window !== 'undefined' ? window : globalThis);

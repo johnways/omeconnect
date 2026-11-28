@@ -122,7 +122,24 @@
     'Meter reading': 'Basa ng metro',
     'Previous reading': 'Nakaraang basa',
     'Current reading': 'Kasalukuyang basa',
-    'Meter multiplier': 'Multiplier ng metro',
+    'Total used on the main meter': 'Kabuuang nagamit sa main meter',
+    'Submeters': 'Mga submeter',
+    '+ Add submeter': '+ Magdagdag ng submeter',
+    'Add a submeter for each house or tenant connected to this meter. Their kWh is part of the main meter, so the bill is divided by the kWh each one used. Saved on this phone only.': 'Magdagdag ng submeter para sa bawat bahay o umuupa na nakakabit sa metrong ito. Kasama ang kanilang kWh sa main meter, kaya hinahati ang bill ayon sa kWh na nagamit ng bawat isa. Sa teleponong ito lang naka-save.',
+    'Submeter name': 'Pangalan ng submeter',
+    'Remove submeter': 'Alisin ang submeter',
+    'Enter both readings': 'Ilagay ang dalawang basa',
+    'Current is lower than previous': 'Mas mababa ang kasalukuyan kaysa nakaraan',
+    'Bill per meter': 'Bill ng bawat metro',
+    'Each submeter pays: its kWh ÷ main meter kWh × the whole bill. The owner pays the rest.': 'Bayad ng bawat submeter: kWh nito ÷ kWh ng main meter × buong bill. Ang may-ari ang magbabayad ng natitira.',
+    'Main meter owner (you)': 'May-ari ng main meter (ikaw)',
+    'Paid to the owner': 'Bayad na sa may-ari',
+    'Not paid yet': 'Hindi pa bayad',
+    'Whole bill': 'Buong bill',
+    'Submeters share': 'Bahagi ng mga submeter',
+    'Still to collect': 'Kokolektahin pa',
+    'The main meter shows 0 kWh, so there is nothing to divide yet.': '0 kWh ang main meter, kaya wala pang hahatiin.',
+    'The submeters add up to more kWh than the main meter. Please check the readings.': 'Mas malaki ang kabuuang kWh ng mga submeter kaysa main meter. Pakisuri ang mga basa.',
     'kWh used in a month': 'kWh na nagamit sa isang buwan',
     'Estimated bill': 'Tantyang bill',
     'Estimated total': 'Tantyang kabuuan',
@@ -299,7 +316,11 @@
     [/^Due in (\d+) days$/, 'Takdang petsa sa loob ng $1 araw'],
     [/^Due date: (.+)$/, 'Takdang petsa: $1'],
     [/^Due (.+)$/, 'Takdang petsa: $1'],
-    [/^Consumption: (.+)$/, 'Konsumo: $1']
+    [/^Consumption: (.+)$/, 'Konsumo: $1'],
+    // Submeters (estimator.js)
+    [/^Paid \((\d+) of (\d+)\)$/, 'Bayad na ($1 sa $2)'],
+    [/^Submeters waiting for readings: (\d+)$/, 'Mga submeter na wala pang basa: $1'],
+    [/^e\.g\. Tenant (\d+)$/, 'hal. Umuupa $1']
   ];
 
   const ATTRS = ['placeholder', 'aria-label', 'title'];
