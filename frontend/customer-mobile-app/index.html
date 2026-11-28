@@ -538,10 +538,20 @@
               <input id="estCurr" type="number" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 12348" />
             </label>
           </div>
-          <label>Meter multiplier
-            <input id="estMult" type="number" inputmode="decimal" min="1" step="1" value="1" />
-            <small class="field-hint">Leave 1 for houses. Some big meters show a multiplier (e.g. ×40) on the meter or bill.</small>
-          </label>
+          <div class="est-used hidden" id="estMainUsed" aria-live="polite">
+            <span class="est-label">Total used on the main meter</span>
+            <strong id="estMainKwh">0 kWh</strong>
+            <small id="estMainSpan"></small>
+          </div>
+
+          <div class="est-subs">
+            <div class="est-subs-head">
+              <h3>Submeters</h3>
+              <button type="button" class="secondary-btn est-add-sub" id="estAddSub">+ Add submeter</button>
+            </div>
+            <p class="field-hint">Add a submeter for each house or tenant connected to this meter. Their kWh is part of the main meter, so the bill is divided by the kWh each one used. Saved on this phone only.</p>
+            <div id="estSubList" class="est-sub-list"></div>
+          </div>
         </section>
 
         <section class="card form-card est-mode hidden" data-mode="kwh">
@@ -559,6 +569,12 @@
           <dl id="estBreakdown" class="est-breakdown"></dl>
           <p id="estCompare" class="est-compare hidden"></p>
           <p class="est-disclaimer">This is an estimate only. Your official OMECO bill may differ because of rate adjustments, taxes, discounts, or the exact reading date.</p>
+        </section>
+
+        <section class="card est-split hidden" id="estSplit" aria-live="polite">
+          <h3>Bill per meter</h3>
+          <p class="field-hint">Each submeter pays: its kWh ÷ main meter kWh × the whole bill. The owner pays the rest.</p>
+          <div id="estSplitBody"></div>
         </section>
       </main>
 

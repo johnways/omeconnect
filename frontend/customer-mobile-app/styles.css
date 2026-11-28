@@ -1368,6 +1368,40 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
 .est-compare.hidden { display: none; }
 .est-disclaimer { margin: 12px 0 0; font-size: 0.74rem; color: var(--muted); }
 
+/* Main meter total + submeters */
+.est-used { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--blue-50); border: 1px solid var(--line); display: grid; gap: 2px; }
+.est-used.hidden { display: none; }
+.est-used strong { font-size: 1.7rem; font-weight: 900; color: var(--primary); font-variant-numeric: tabular-nums; }
+.est-used small { font-size: 0.8rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.est-subs { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line-strong); }
+.est-subs-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.est-subs-head h3 { margin: 0; font-size: 1rem; }
+.est-add-sub { width: auto !important; margin: 0 !important; padding: 8px 12px !important; font-size: 0.82rem !important; }
+.est-sub-list { display: grid; gap: 10px; margin-top: 10px; }
+.est-sub { padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); display: grid; gap: 8px; }
+.est-sub-top { display: flex; align-items: flex-end; gap: 8px; }
+.est-sub-name { flex: 1; }
+.est-sub-remove { flex: none; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--muted); font-size: 1.3rem; line-height: 1; cursor: pointer; }
+.est-sub-remove:hover { color: var(--red-600, #dc2626); border-color: currentColor; }
+.est-sub-used { margin: 0; font-size: 0.82rem; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.est-sub-used.bad, .est-split-note.bad { color: var(--red-600, #dc2626); }
+.est-split { margin-top: 14px; border-top: 4px solid var(--primary); }
+.est-split.hidden { display: none; }
+.est-split h3 { margin: 0 0 4px; }
+.est-split-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.est-split-row { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); display: grid; gap: 3px; }
+.est-split-row.owner { background: var(--blue-50); }
+.est-split-row.paid { border-color: var(--green-600); }
+.est-split-main { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.est-split-main strong { overflow-wrap: anywhere; }
+.est-split-amount { font-size: 1.05rem; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.est-split-formula { font-size: 0.78rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.est-paid { display: flex !important; align-items: center; gap: 8px; margin-top: 4px; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+.est-paid input { width: 18px; height: 18px; margin: 0; accent-color: var(--green-600); }
+.est-split-row.paid .est-paid { color: var(--green-600); }
+.est-split-note { margin: 10px 0 0; font-size: 0.82rem; color: var(--muted); }
+.est-split-sum { margin-top: 12px; }
+
 
 /* Statement viewer sheet */
 .sheet.wide { max-width: 480px; background: #e7ebf1; }

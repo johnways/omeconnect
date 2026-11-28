@@ -2,6 +2,9 @@
 // Converts meter readings or kWh into an expected bill and
 // multiplies by the rate OMECO staff set in the admin console
 // (electricity_rates, read with get_current_rates()).
+// Submeters: the owner of the main meter can add submeters (name + readings).
+// The bill is divided by kWh (OMECO_BILLING.splitBill) and the owner can mark
+// who has paid. Saved on this phone only (localStorage).
 // Uses script.js globals: currentSession, currentCustomer, formatCurrency.
 (function () {
   const cfg = window.OMECO_CONFIG || {};
@@ -17,13 +20,15 @@
   let rates = [];
   let ratesAt = 0;
   let mode = 'meter';
+  let subs = []; // { id, name, prev, curr, paid }
+  const MAX_SUBS = 12;
 
   // -------------------------------------------------- saved inputs (this phone only)
   function save() {
     try {
       localStorage.setItem(STORE, JSON.stringify({
-        mode, prev: $('estPrev').value, curr: $('estCurr').value, mult: $('estMult').value, kwh: $('estKwh').value,
-        cls: $('estClass').value
+        mode, prev: $('estPrev').value, curr: $('estCurr').value, kwh: $('estKwh').value,
+        cls: $('estClass').value, subs
       }));
     } catch { /* private mode: fine */ }
   }
@@ -33,7 +38,13 @@
     if (!data) return;
     $('estPrev').value = data.prev || '';
     $('estCurr').value = data.curr || '';
-    $('estMult').value = data.mult || '1';
+    subs = (Array.isArray(data.subs) ? data.subs : []).slice(0, MAX_SUBS).map((x, i) => ({
+      id: String(x.id || `s${Date.now()}${i}`),
+      name: String(x.name || '').slice(0, 40),
+      prev: x.prev === undefined || x.prev === null ? '' : String(x.prev),
+      curr: x.curr === undefined || x.curr === null ? '' : String(x.curr),
+      paid: Boolean(x.paid)
+    }));
     $('estKwh').value = data.kwh || '';
     // Only Meter reading and kWh remain (any other saved choice opens Meter reading).
     if (data.mode === 'meter' || data.mode === 'kwh') setMode(data.mode, false);
@@ -70,6 +81,8 @@
   const currentRate = () => rates.find((r) => r.customer_class === $('estClass').value) || rates.find((r) => r.customer_class === 'residential') || rates[0] || null;
   const peso = (v) => (typeof formatCurrency === 'function' ? formatCurrency(v)
     : `₱${Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+  const num = (v) => Number(v).toLocaleString('en-PH', { maximumFractionDigits: 2 });
+  const kwhText = (v) => `${num(v)} kWh`;
   const rateText = (v) => `₱${Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 
   // -------------------------------------------------- modes
@@ -93,9 +106,7 @@
       if (prev === '' || curr === '') return { kwh: null, note: 'Enter both meter readings.' };
       const diff = Number(curr) - Number(prev);
       if (diff < 0) return { kwh: null, note: 'The current reading is lower than the previous one. Please check the numbers.' };
-      const mult = Math.max(1, Number($('estMult').value) || 1);
-      const span = `${Number(curr).toLocaleString('en-PH')} − ${Number(prev).toLocaleString('en-PH')}`;
-      return { kwh: diff * mult, note: mult > 1 ? `(${span}) × ${mult}` : span };
+      return { kwh: diff, note: `${num(curr)} − ${num(prev)}` };
     }
     const v = $('estKwh').value;
     return v === '' ? { kwh: null, note: 'Enter the kWh you used.' } : { kwh: Math.max(0, Number(v)), note: '' };
@@ -125,8 +136,11 @@
       $('estKwhUsed').textContent = kwh === null ? note : `${kwh.toFixed(1)} kWh · waiting for OMECO's rate`;
       breakdown.replaceChildren();
       compare.classList.add('hidden');
+      renderMainUsed();
+      renderSplit(null, null);
       return;
     }
+    renderMainUsed();
     $('estKwhUsed').textContent = `${kwh.toLocaleString('en-PH', { maximumFractionDigits: 1 })} kWh used${note ? ` (${note})` : ''}`;
 
     // Full statement schedule (same math as the database's compute_bill()).
@@ -139,6 +153,7 @@
       if (Number(rate.surcharge_percent)) groupRows.push(...row(`If paid late (+${Number(rate.surcharge_percent)}%)`, peso(Math.round(sTotal * (1 + Number(rate.surcharge_percent) / 100) * 100) / 100)));
       breakdown.replaceChildren(...groupRows);
       showCompare(kwh);
+      renderSplit(sTotal, kwh);
       return;
     }
 
@@ -164,6 +179,141 @@
     rows.push(...row('Estimated total', peso(total), true));
     breakdown.replaceChildren(...rows);
     showCompare(kwh);
+    renderSplit(total, kwh);
+  }
+
+  // -------------------------------------------------- submeters
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else if (k === 'value') node.value = v;
+      else if (k === 'checked') node.checked = Boolean(v);
+      else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v === true ? '' : v);
+    });
+    children.flat().forEach((c) => { if (c !== null && c !== undefined && c !== false) node.append(c); });
+    return node;
+  }
+
+  const subName = (s, i) => (s.name || '').trim() || `Submeter ${i + 1}`;
+  // kWh of one submeter: null = readings missing, NaN = current lower than previous.
+  function subKwh(s) {
+    if (s.prev === '' || s.curr === '') return null;
+    const diff = Number(s.curr) - Number(s.prev);
+    return diff < 0 ? NaN : diff;
+  }
+
+  // The big "30 kWh" figure under the main meter readings.
+  function renderMainUsed() {
+    const box = $('estMainUsed');
+    const prev = $('estPrev').value;
+    const curr = $('estCurr').value;
+    const diff = Number(curr) - Number(prev);
+    if (prev === '' || curr === '' || diff < 0) { box.classList.add('hidden'); return; }
+    $('estMainKwh').textContent = kwhText(diff);
+    $('estMainSpan').textContent = `${num(curr)} − ${num(prev)} = ${kwhText(diff)}`;
+    box.classList.remove('hidden');
+  }
+
+  function subUsedText(s) {
+    const k = subKwh(s);
+    if (k === null) return 'Enter both readings';
+    if (Number.isNaN(k)) return 'Current is lower than previous';
+    return `${num(s.curr)} − ${num(s.prev)} = ${kwhText(k)}`;
+  }
+
+  // Inputs are built once (on add / remove / restore) so typing keeps focus.
+  function renderSubs() {
+    const list = $('estSubList');
+    list.replaceChildren(...subs.map((s, i) => {
+      const used = el('p', { class: 'est-sub-used', text: subUsedText(s) });
+      const mark = () => used.classList.toggle('bad', Number.isNaN(subKwh(s)));
+      const update = (key) => (event) => {
+        s[key] = event.target.value;
+        used.textContent = subUsedText(s);
+        mark();
+        calculate();
+        save();
+      };
+      mark();
+      return el('div', { class: 'est-sub', 'data-sub': s.id },
+        el('div', { class: 'est-sub-top' },
+          el('label', { class: 'est-sub-name' },
+            el('span', { text: 'Submeter name' }),
+            el('input', { type: 'text', maxlength: '40', value: s.name, placeholder: `e.g. Tenant ${i + 1}`, oninput: update('name') })),
+          el('button', {
+            type: 'button', class: 'est-sub-remove', 'aria-label': 'Remove submeter', title: 'Remove submeter',
+            onclick: () => { subs = subs.filter((x) => x.id !== s.id); renderSubs(); calculate(); save(); }
+          }, '×')),
+        el('div', { class: 'est-grid' },
+          el('label', {}, 'Previous reading',
+            el('input', { type: 'number', inputmode: 'decimal', min: '0', step: '0.1', value: s.prev, placeholder: 'e.g. 500', oninput: update('prev') })),
+          el('label', {}, 'Current reading',
+            el('input', { type: 'number', inputmode: 'decimal', min: '0', step: '0.1', value: s.curr, placeholder: 'e.g. 512', oninput: update('curr') }))),
+        used);
+    }));
+    $('estAddSub').disabled = subs.length >= MAX_SUBS;
+  }
+
+  // "Bill per meter": each person's share, the computation, and paid status.
+  function renderSplit(total, kwh) {
+    const card = $('estSplit');
+    const body = $('estSplitBody');
+    if (mode !== 'meter' || !subs.length || total === null || kwh === null) { card.classList.add('hidden'); return; }
+    card.classList.remove('hidden');
+
+    const ready = subs.map((s, i) => ({ s, i, k: subKwh(s) })).filter((x) => x.k !== null && !Number.isNaN(x.k));
+    const waiting = subs.length - ready.length;
+    const result = window.OMECO_BILLING.splitBill(total, kwh, ready.map((x) => x.k));
+    const r2 = window.OMECO_BILLING.round2;
+
+    if (result.error === 'no-usage') {
+      body.replaceChildren(el('p', { class: 'est-split-note', text: 'The main meter shows 0 kWh, so there is nothing to divide yet.' }));
+      return;
+    }
+    if (result.error === 'subs-exceed') {
+      body.replaceChildren(el('p', { class: 'est-split-note bad', text: 'The submeters add up to more kWh than the main meter. Please check the readings.' }));
+      return;
+    }
+
+    const formula = (k, amount) => `${kwhText(k)} ÷ ${kwhText(kwh)} × ${peso(total)} = ${peso(amount)}`;
+    const rows = ready.map((x, n) => {
+      const share = result.shares[n];
+      const box = el('input', {
+        type: 'checkbox', checked: x.s.paid,
+        onchange: (event) => { x.s.paid = event.target.checked; save(); calculate(); }
+      });
+      return el('li', { class: `est-split-row${x.s.paid ? ' paid' : ''}` },
+        el('div', { class: 'est-split-main' },
+          el('strong', { 'data-no-translate': true, text: subName(x.s, x.i) }),
+          el('span', { class: 'est-split-amount', text: peso(share.amount) })),
+        el('small', { class: 'est-split-formula', text: formula(share.kwh, share.amount) }),
+        el('label', { class: 'est-paid' }, box, el('span', { text: x.s.paid ? 'Paid to the owner' : 'Not paid yet' })));
+    });
+    const subKwhSum = kwh - result.owner.kwh;
+    const owner = el('li', { class: 'est-split-row owner' },
+      el('div', { class: 'est-split-main' },
+        el('strong', { text: 'Main meter owner (you)' }),
+        el('span', { class: 'est-split-amount', text: peso(result.owner.amount) })),
+      el('small', { class: 'est-split-formula', text: `${kwhText(kwh)} − ${kwhText(subKwhSum)} = ${kwhText(result.owner.kwh)}` }),
+      el('small', { class: 'est-split-formula', text: `${peso(total)} − ${peso(r2(total - result.owner.amount))} = ${peso(result.owner.amount)}` }));
+
+    const fromSubs = r2(result.shares.reduce((a, sh) => a + sh.amount, 0));
+    const collected = r2(ready.reduce((a, x, n) => a + (x.s.paid ? result.shares[n].amount : 0), 0));
+    const paidCount = ready.filter((x) => x.s.paid).length;
+    const summary = el('dl', { class: 'est-breakdown est-split-sum' },
+      ...row('Whole bill', peso(total)),
+      ...row('Submeters share', peso(fromSubs)),
+      ...row(`Paid (${paidCount} of ${ready.length})`, peso(collected)),
+      ...row('Still to collect', peso(r2(fromSubs - collected)), true));
+
+    body.replaceChildren(...[
+      el('ul', { class: 'est-split-list' }, owner, rows),
+      waiting ? el('p', { class: 'est-split-note', text: `Submeters waiting for readings: ${waiting}` }) : null,
+      summary].filter(Boolean));
   }
 
   // Compare with the customer's latest real bill.
@@ -184,8 +334,17 @@
 
   // -------------------------------------------------- wiring
   document.querySelectorAll('.est-tab').forEach((tab) => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
-  ['estPrev', 'estCurr', 'estMult', 'estKwh'].forEach((id) => $(id).addEventListener('input', () => { calculate(); save(); }));
+  ['estPrev', 'estCurr', 'estKwh'].forEach((id) => $(id).addEventListener('input', () => { calculate(); save(); }));
   $('estClass').addEventListener('change', () => { calculate(); save(); });
+  $('estAddSub').addEventListener('click', () => {
+    if (subs.length >= MAX_SUBS) return;
+    subs.push({ id: `s${Date.now()}`, name: '', prev: '', curr: '', paid: false });
+    renderSubs();
+    calculate();
+    save();
+    const first = $('estSubList').querySelector('.est-sub:last-child input');
+    if (first) first.focus();
+  });
   document.querySelectorAll('[data-screen="estimatorScreen"]').forEach((button) => button.addEventListener('click', () => {
     const bills = (typeof currentCustomer !== 'undefined' && currentCustomer && currentCustomer.bills) || [];
     const last = bills.find((b) => b.consumption_kwh != null);
@@ -196,6 +355,7 @@
   }));
 
   restore();
+  renderSubs();
   calculate();
   void loadRates(true);
 

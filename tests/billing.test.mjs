@@ -33,3 +33,26 @@ test('every line is rounded to centavos', () => {
   const { lines } = scheduleBreakdown(fixture.schedule, 137.5);
   for (const line of lines) assert.equal(Math.round(line.amount * 100) / 100, line.amount, line.name);
 });
+
+// ---------------------------------------------------------------- submeter split
+const { splitBill } = sandbox.OMECO_BILLING;
+
+test('submeters pay by kWh and the owner pays the rest', () => {
+  // Main meter 1000 -> 1030 = 30 kWh, bill ₱600; submeter A used 12, B used 6.
+  const { shares, owner } = splitBill(600, 30, [12, 6]);
+  assert.deepEqual(shares.map((s) => s.amount), [240, 120]);
+  assert.equal(owner.kwh, 12);
+  assert.equal(owner.amount, 240);
+});
+
+test('the shares always add up to the whole bill (centavo rounding)', () => {
+  const total = 1234.57;
+  const { shares, owner } = splitBill(total, 37, [11.3, 7.9, 4.4]);
+  const sum = shares.reduce((a, s) => a + s.amount, 0) + owner.amount;
+  assert.equal(Math.round(sum * 100) / 100, total);
+});
+
+test('submeters using more than the main meter is refused', () => {
+  assert.equal(splitBill(600, 30, [20, 15]).error, 'subs-exceed');
+  assert.equal(splitBill(600, 0, [1]).error, 'no-usage');
+});
