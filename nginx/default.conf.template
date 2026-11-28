@@ -119,6 +119,12 @@ server {
         return 200 "ok\n";
     }
 
+    # Computer app description (staff console can be installed from Chrome / Edge).
+    location = /admin-dashboard/manifest.webmanifest {
+        types { }
+        default_type application/manifest+json;
+    }
+
     location ~ /\. {
         deny all;
         return 404;
