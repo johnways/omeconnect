@@ -71,11 +71,11 @@
     const body = el('div');
     const result = el('div', { class: 'bill-split-result hidden' },
       el('h4', { text: 'Bill per meter' }),
-      el('p', { class: 'field-hint', text: 'Each submeter pays: its kWh ÷ main meter kWh × the whole bill. The owner pays the rest.' }),
+      el('p', { class: 'field-hint', text: 'Price per kWh = whole bill ÷ main meter kWh. Each submeter pays its kWh × price per kWh, and the owner pays for the rest of the kWh.' }),
       body);
     const draw = () => {
       result.classList.toggle('hidden', !subs.length);
-      if (subs.length) SM.split(body, { total, kwh: main.kwh, subs, onPaid: () => { save(); draw(); } });
+      if (subs.length) SM.split(body, { total, kwh: main.kwh, subs, mainText: main.text, title: bill.billing_month || '', onPaid: () => { save(); draw(); } });
     };
 
     const wrap = el('section', { class: 'bill-split' },

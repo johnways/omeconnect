@@ -56,3 +56,11 @@ test('submeters using more than the main meter is refused', () => {
   assert.equal(splitBill(600, 30, [20, 15]).error, 'subs-exceed');
   assert.equal(splitBill(600, 0, [1]).error, 'no-usage');
 });
+
+test('price per kWh = whole bill ÷ main meter kWh, and each share = kWh × price', () => {
+  const { rate, shares, owner, rounding } = splitBill(383.61, 30, [12, 6]);
+  assert.equal(Math.round(rate * 10000) / 10000, 12.787);
+  assert.deepEqual(shares.map((s) => s.amount), [153.44, 76.72]);
+  assert.equal(owner.amount, 153.45);
+  assert.equal(rounding, 0.01); // the leftover centavo goes to the owner
+});

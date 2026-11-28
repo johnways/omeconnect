@@ -134,7 +134,14 @@
     'Split this bill with submeters': 'Hatiin ang bill na ito sa mga submeter',
     'kWh used on this bill (from OMECO)': 'kWh na nagamit sa bill na ito (mula sa OMECO)',
     'Add each house or tenant on a submeter and type its readings for this billing month. Saved on this phone only.': 'Idagdag ang bawat bahay o umuupa na naka-submeter at ilagay ang basa nito para sa buwang ito. Sa teleponong ito lang naka-save.',
-    'Each submeter pays: its kWh ÷ main meter kWh × the whole bill. The owner pays the rest.': 'Bayad ng bawat submeter: kWh nito ÷ kWh ng main meter × buong bill. Ang may-ari ang magbabayad ng natitira.',
+    'Price per kWh = whole bill ÷ main meter kWh. Each submeter pays its kWh × price per kWh, and the owner pays for the rest of the kWh.': 'Presyo kada kWh = buong bill ÷ kWh ng main meter. Ang bawat submeter ay magbabayad ng kWh nito × presyo kada kWh, at ang may-ari ang magbabayad sa natitirang kWh.',
+    'Main meter used': 'Nagamit sa main meter',
+    'Price per kWh': 'Presyo kada kWh',
+    'Each meter pays its kWh × price per kWh': 'Bawat metro: kWh nito × presyo kada kWh',
+    'Check: all shares added together': 'Suriin: pinagsamang lahat ng bahagi',
+    'Same as the whole bill': 'Kapareho ng buong bill',
+    'Share the computation': 'Ibahagi ang kompyutasyon',
+    'Could not share': 'Hindi maibahagi',
     'Main meter owner (you)': 'May-ari ng main meter (ikaw)',
     'Paid to the owner': 'Bayad na sa may-ari',
     'Not paid yet': 'Hindi pa bayad',
@@ -324,7 +331,10 @@
     [/^Paid \((\d+) of (\d+)\)$/, 'Bayad na ($1 sa $2)'],
     [/^Submeters waiting for readings: (\d+)$/, 'Mga submeter na wala pang basa: $1'],
     [/^e\.g\. Tenant (\d+)$/, 'hal. Umuupa $1'],
-    [/^Submeters: all paid \((\d+)\)$/,'Mga submeter: bayad na lahat ($1)'],
+    [/^([\d.,]+%) of the bill$/, '$1 ng bill'],
+    [/^Plus (.+) rounding, so the shares add up to the bill exactly$/, 'Dagdag na $1 dahil sa rounding, para eksaktong tumugma sa bill'],
+    [/^(.+) \(whole bill\) ÷ (.+)$/, '$1 (buong bill) ÷ $2'],
+    [/^Submeters: all paid \((\d+)\)$/, 'Mga submeter: bayad na lahat ($1)'],
     [/^Submeters: (\d+) of (\d+) paid · (.+) to collect$/, 'Mga submeter: $1 sa $2 bayad na · $3 kokolektahin pa']
   ];
 

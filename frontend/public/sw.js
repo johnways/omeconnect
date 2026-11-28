@@ -2,7 +2,7 @@
 // The app always loads the newest version from the internet; nothing from the
 // app is stored for offline use. The only saved page is a small "No internet"
 // notice, shown if the app is opened without a connection.
-const CACHE = 'omeconnect-online-v10';
+const CACHE = 'omeconnect-online-v11';
 const OFFLINE_PAGE = '/offline.html';
 
 self.addEventListener('install', (event) => {
