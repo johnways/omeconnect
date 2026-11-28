@@ -140,7 +140,7 @@
     'Each meter pays its kWh × price per kWh': 'Bawat metro: kWh nito × presyo kada kWh',
     'Check: all shares added together': 'Suriin: pinagsamang lahat ng bahagi',
     'Same as the whole bill': 'Kapareho ng buong bill',
-    'Share the computation': 'Ibahagi ang kompyutasyon',
+    'Share': 'Ibahagi',
     'Could not share': 'Hindi maibahagi',
     'Main meter owner (you)': 'May-ari ng main meter (ikaw)',
     'Paid to the owner': 'Bayad na sa may-ari',

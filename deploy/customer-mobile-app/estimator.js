@@ -195,7 +195,7 @@
     if (mode !== 'meter' || !subs.length || total === null || kwh === null) { card.classList.add('hidden'); return; }
     card.classList.remove('hidden');
     SM.split($('estSplitBody'), {
-      total, kwh, subs, title: 'estimate', mainText: `${num($('estCurr').value)} − ${num($('estPrev').value)} = ${kwhText(kwh)}`,
+      total, kwh, subs, title: 'Bill estimate', mainText: `${num($('estCurr').value)} − ${num($('estPrev').value)} = ${kwhText(kwh)}`,
       onPaid: () => { save(); calculate(); }
     });
   }
