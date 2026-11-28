@@ -799,3 +799,17 @@ a.btn-sm { display: inline-flex; align-items: center; text-decoration: none; }
 .auto-switch-text b { margin-left: 2px; }
 .auto-reasons { margin: 6px 0 0; padding-left: 18px; font-size: 0.78rem; color: var(--muted); display: grid; gap: 2px; }
 .auto-reasons li::marker { color: #d97706; }
+
+/* Computer app (desktop-app.js) */
+.install-app-btn { display: inline-flex; align-items: center; gap: 6px; }
+.install-app-btn.hidden { display: none !important; }
+.install-app-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.login-install { width: 100%; justify-content: center; margin-top: 12px; }
+html.computer-only #app, html.computer-only #toastHost, html.computer-only dialog { display: none !important; }
+.computer-only-notice { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: linear-gradient(160deg, #0b2e6b, #1652c5); color: #fff; font-family: Arial, Helvetica, sans-serif; }
+.con-card { max-width: 440px; text-align: center; }
+.con-card img { border-radius: 18px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.con-card h1 { margin: 16px 0 8px; font-size: 1.45rem; }
+.con-card p { margin: 0 0 12px; line-height: 1.5; color: rgba(255, 255, 255, 0.9); }
+.con-card ol { text-align: left; margin: 0 0 14px; padding-left: 22px; line-height: 1.6; }
+.con-card .con-note { font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); }
