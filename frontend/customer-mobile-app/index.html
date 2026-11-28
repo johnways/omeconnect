@@ -314,13 +314,19 @@
                 <select id="accountSwitch" aria-label="Choose which OMECO account to view"></select>
               </label>
             </div>
-            <div class="hero-amount">
-              <span>Amount due</span>
-              <strong id="currentBillAmount">—</strong>
-              <div class="due-row">
-                <small id="heroDueDate">Due date: —</small>
-                <b id="heroDueChip" class="due-chip hidden"></b>
+            <div class="hero-amount-row">
+              <div class="hero-amount">
+                <span>Amount due</span>
+                <strong id="currentBillAmount">—</strong>
+                <div class="due-row">
+                  <small id="heroDueDate">Due date: —</small>
+                  <b id="heroDueChip" class="due-chip hidden"></b>
+                </div>
               </div>
+              <button class="hero-bills-btn" type="button" data-screen="billsScreen" aria-label="Open My Bills">
+                <span class="action-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /></svg></span>
+                <span class="hero-bills-label">My Bills</span>
+              </button>
             </div>
             <div class="hero-actions">
               <button id="payNowButton" class="primary-btn pay-btn hidden" type="button">Pay now</button>
@@ -368,11 +374,6 @@
 
         <h3 class="list-title">Services</h3>
         <div class="quick-actions">
-          <button class="action-card" type="button" data-screen="billsScreen">
-            <span class="action-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /></svg></span>
-            <span>My Bills</span>
-            <strong id="quickBillAmount">—</strong>
-          </button>
           <button class="action-card" type="button" data-screen="complaintsScreen">
             <span class="action-icon orange" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg></span>
             <span>Report</span>
