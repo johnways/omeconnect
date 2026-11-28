@@ -128,8 +128,11 @@ function setScreen(screenId) {
     }
   });
 
+  // My Bills and the estimator open from Home (no own tab), so Home stays lit.
+  const tabFor = { billsScreen: 'homeScreen', estimatorScreen: 'homeScreen' };
+  const tab = tabFor[screenId] || screenId;
   document.querySelectorAll('.bottom-nav .nav-item').forEach((item) => {
-    item.classList.toggle('active', item.dataset.screen === screenId);
+    item.classList.toggle('active', item.dataset.screen === tab);
   });
 
   // Sign-in screens show neither the bottom menu nor the AI button.
