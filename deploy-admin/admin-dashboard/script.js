@@ -260,12 +260,8 @@ function setBarangay(barangay) {
 // ---------------------------------------------------------------- Barangays inside their municipality
 const barangayView = { search: '', sort: 'order' }; // kept across live refreshes
 
-// "32%" share of a total (one decimal under 10%, so small areas never read 0%).
-function sharePct(part, whole) {
-  if (!whole) return '0%';
-  const p = (part / whole) * 100;
-  return `${p < 10 ? Math.round(p * 10) / 10 : Math.round(p)}%`;
-}
+// "3 consumers" - a plain count: an area has no fixed size, it keeps growing.
+const consumersText = (n) => (n ? `${n.toLocaleString('en-PH')} consumer${n === 1 ? '' : 's'}` : 'No consumers yet');
 
 function barangayPanel(municipality, total, perBarangay) {
   const barangays = coverage.get(municipality) || [];
@@ -289,7 +285,7 @@ function barangayPanel(municipality, total, perBarangay) {
       const tile = el('button', { type: 'button', role: 'listitem', class: `brgy-tile${active ? ' active' : ''}${count ? '' : ' empty'}`, 'aria-pressed': String(active), title: `${barangay}: ${count} consumer${count === 1 ? '' : 's'}` },
         el('span', { class: 'brgy-name' }, barangay),
         el('span', { class: 'brgy-count' }, String(count)),
-        el('span', { class: 'brgy-share' }, count ? `${sharePct(count, total)} of town` : 'No consumers yet'));
+        el('span', { class: 'brgy-share' }, consumersText(count)));
       tile.addEventListener('click', () => setBarangay(active ? '' : barangay));
       return tile;
     }));
@@ -361,8 +357,7 @@ function renderCustomers() {
     },
     el('span', { class: 'area-top' }, el('span', { class: 'area-name' }, label), el('span', { class: 'area-count' }, String(count))),
     el('span', { class: 'area-meta' }, meta),
-    extraClass === 'all' ? el('span', { class: 'area-share total' }, 'All consumers')
-      : el('span', { class: 'area-share' }, count ? `${sharePct(count, base.length)} of consumers` : 'No consumers yet'));
+    el('span', { class: `area-share${extraClass === 'all' ? ' total' : ''}` }, consumersText(count)));
     button.addEventListener('click', onClick);
     return button;
   };

@@ -634,7 +634,7 @@ th {
   font-size: 0.74rem;
 }
 
-/* Share of all consumers (replaces the old progress bar) */
+/* Consumer count label (no percentage: areas keep growing) */
 .area-share {
   justify-self: start;
   width: fit-content;
