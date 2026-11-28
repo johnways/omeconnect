@@ -297,6 +297,7 @@
         el('table', {}, el('tbody', {}, charges.map(([k, v]) =>
           el('tr', {}, el('td', { text: CHARGE_LABELS[k] || k.replace(/_/g, ' ') }), el('td', { class: 'num', text: formatCurrency(v) })))))) : null,
       compare ? el('div', { class: `bill-compare ${compare.kind}` }, el('strong', { text: compare.text }), compare.tip ? el('p', { text: compare.tip }) : null) : null,
+      window.OMECO_BILLSPLIT ? window.OMECO_BILLSPLIT.section(bill) : null,
       el('div', { class: 'sheet-actions' }, payBtn,
         el('button', { type: 'button', class: 'primary-btn', onclick: () => openStatement(bill) }, 'View statement (receipt)'),
         el('button', { type: 'button', class: 'secondary-btn', onclick: () => printBill(bill, rows, charges) }, 'Print short summary'))

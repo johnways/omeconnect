@@ -131,6 +131,9 @@
     'Enter both readings': 'Ilagay ang dalawang basa',
     'Current is lower than previous': 'Mas mababa ang kasalukuyan kaysa nakaraan',
     'Bill per meter': 'Bill ng bawat metro',
+    'Split this bill with submeters': 'Hatiin ang bill na ito sa mga submeter',
+    'kWh used on this bill (from OMECO)': 'kWh na nagamit sa bill na ito (mula sa OMECO)',
+    'Add each house or tenant on a submeter and type its readings for this billing month. Saved on this phone only.': 'Idagdag ang bawat bahay o umuupa na naka-submeter at ilagay ang basa nito para sa buwang ito. Sa teleponong ito lang naka-save.',
     'Each submeter pays: its kWh ÷ main meter kWh × the whole bill. The owner pays the rest.': 'Bayad ng bawat submeter: kWh nito ÷ kWh ng main meter × buong bill. Ang may-ari ang magbabayad ng natitira.',
     'Main meter owner (you)': 'May-ari ng main meter (ikaw)',
     'Paid to the owner': 'Bayad na sa may-ari',
@@ -320,7 +323,9 @@
     // Submeters (estimator.js)
     [/^Paid \((\d+) of (\d+)\)$/, 'Bayad na ($1 sa $2)'],
     [/^Submeters waiting for readings: (\d+)$/, 'Mga submeter na wala pang basa: $1'],
-    [/^e\.g\. Tenant (\d+)$/, 'hal. Umuupa $1']
+    [/^e\.g\. Tenant (\d+)$/, 'hal. Umuupa $1'],
+    [/^Submeters: all paid \((\d+)\)$/,'Mga submeter: bayad na lahat ($1)'],
+    [/^Submeters: (\d+) of (\d+) paid · (.+) to collect$/, 'Mga submeter: $1 sa $2 bayad na · $3 kokolektahin pa']
   ];
 
   const ATTRS = ['placeholder', 'aria-label', 'title'];
