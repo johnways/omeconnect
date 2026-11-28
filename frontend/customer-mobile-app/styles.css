@@ -1423,7 +1423,33 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
 .split-check strong { font-size: 0.86rem; }
 .split-check .est-split-formula { overflow-wrap: anywhere; }
 .split-check-ok { font-size: 0.78rem; font-weight: 800; color: var(--green-600); }
-.split-share { width: 100%; margin-top: 12px !important; }
+.split-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.split-actions button { width: 100%; margin: 0 !important; }
+.split-share-text { width: 100%; margin-top: 10px; padding: 10px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font: 0.8rem/1.4 ui-monospace, Consolas, monospace; resize: vertical; }
+.split-share-text.hidden { display: none; }
+
+/* Printed bill split (submeters.js printSplit): only .split-print is printed */
+.split-print { display: none; }
+@media print {
+  body.printing-split > *:not(.split-print) { display: none !important; }
+  body.printing-split .split-print { display: block !important; color: #000; background: #fff; font: 10.5pt/1.4 Arial, Helvetica, sans-serif; padding: 10mm; }
+  .split-print h1 { font-size: 15pt; margin: 0 0 2pt; }
+  .split-print h2 { font-size: 12pt; margin: 12pt 0 4pt; }
+  .split-print .sp-meta { margin: 0 0 6pt; color: #444; font-size: 9.5pt; }
+  .split-print table { width: 100%; border-collapse: collapse; margin-top: 4pt; }
+  .split-print th, .split-print td { text-align: left; padding: 4pt 5pt; border: 1px solid #999; vertical-align: top; }
+  .split-print thead th, .split-print tfoot th { background: #eee; }
+  .split-print .sp-how th { width: 38%; background: #f4f4f4; }
+  .split-print .num { text-align: right; white-space: nowrap; }
+  .split-print .strong { font-weight: 700; }
+  .split-print .sp-owner td { background: #f4f7ff; }
+  .split-print .sp-check { margin: 8pt 0 0; padding: 5pt 7pt; border: 1px solid #2e7d32; font-weight: 700; }
+  .split-print .sp-note { margin: 6pt 0 0; font-size: 8.5pt; color: #444; }
+  .split-print .sp-slip { break-inside: avoid; page-break-inside: avoid; margin-top: 14pt; }
+  .split-print .sp-cut { margin: 0 0 6pt; color: #777; font-size: 9pt; letter-spacing: 1px; overflow: hidden; white-space: nowrap; }
+  .split-print .sp-due th, .split-print .sp-due td { font-weight: 700; font-size: 12pt; }
+  .split-print .sp-sign p { margin: 12pt 0 0; }
+}
 
 /* My Bills: split a bill with submeters (bill-split.js) */
 .bill-split { margin-top: 14px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); display: grid; gap: 10px; }

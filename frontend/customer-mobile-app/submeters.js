@@ -143,6 +143,81 @@
     return lines.join('\n');
   }
 
+  // ---------------------------------------------------------------- print / save as PDF
+  // Page 1: the whole computation for the owner. Then one slip per submeter
+  // (its readings, kWh × price per kWh, amount, and signature lines) that the
+  // owner can cut out and give, so everyone sees the same computation.
+  function printSplit({ title, mainText, total, kwh, result, ready }) {
+    const account = typeof currentCustomer !== 'undefined' && currentCustomer && currentCustomer.account;
+    const acct = account && account.account_number ? `Account ••••${String(account.account_number).slice(-4)}` : '';
+    const rate = rateText(result.rate);
+    const when = new Date().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
+    const td = (text, cls) => el('td', { class: cls || null, text });
+    const th = (text, cls) => el('th', { class: cls || null, text });
+    const subKwhTotal = r2(kwh - result.owner.kwh);
+
+    const how = el('table', { class: 'sp-how' }, el('tbody', {},
+      el('tr', {}, th('1. Main meter used'), td(mainText || kwhText(kwh))),
+      el('tr', {}, th('Whole bill'), td(peso(total))),
+      el('tr', {}, th('2. Price per kWh'), td(`${peso(total)} ÷ ${kwhText(kwh)} = ${rate}`)),
+      el('tr', {}, th('3. Each meter pays'), td(`its kWh × ${rate}`))));
+
+    const people = el('table', { class: 'sp-table' },
+      el('thead', {}, el('tr', {}, th('Name'), th('Previous', 'num'), th('Current', 'num'), th('kWh', 'num'),
+        th('Computation'), th('Amount', 'num'), th('Status'))),
+      el('tbody', {},
+        ready.map((x, n) => {
+          const sh = result.shares[n];
+          return el('tr', {}, el('td', { 'data-no-translate': true, text: subName(x.s, x.i) }), td(num(x.s.prev), 'num'), td(num(x.s.curr), 'num'), td(num(sh.kwh), 'num'),
+            td(`${num(sh.kwh)} × ${rate} = ${peso(sh.amount)}`), td(peso(sh.amount), 'num strong'), td(x.s.paid ? 'Paid' : 'Not paid yet'));
+        }),
+        el('tr', { class: 'sp-owner' }, td('Main meter owner'), td('—', 'num'), td('—', 'num'), td(num(result.owner.kwh), 'num'),
+          td(`${num(kwh)} − ${num(subKwhTotal)} = ${num(result.owner.kwh)} kWh × ${rate}${result.rounding ? ` + ${peso(result.rounding)} rounding` : ''}`),
+          td(peso(result.owner.amount), 'num strong'), td('—'))),
+      el('tfoot', {}, el('tr', {}, th('Total'), th(''), th(''), th(num(kwh), 'num'), th(''), th(peso(total), 'num'), th(''))));
+
+    const parts = [...result.shares.map((sh) => peso(sh.amount)), peso(result.owner.amount)];
+    const slips = ready.map((x, n) => {
+      const sh = result.shares[n];
+      return el('section', { class: 'sp-slip' },
+        el('p', { class: 'sp-cut', text: '✂ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -' }),
+        el('h2', { text: `Bill share slip: ${subName(x.s, x.i)}` }),
+        el('p', { class: 'sp-meta', text: [title, acct, `Printed ${when}`].filter(Boolean).join(' · ') }),
+        el('table', { class: 'sp-how' }, el('tbody', {},
+          el('tr', {}, th('Your submeter reading'), td(`${num(x.s.curr)} − ${num(x.s.prev)} = ${kwhText(sh.kwh)}`)),
+          el('tr', {}, th('Price per kWh'), td(`${peso(total)} (whole bill) ÷ ${kwhText(kwh)} (main meter) = ${rate}`)),
+          el('tr', {}, th('Your share'), td(`${kwhText(sh.kwh)} × ${rate} = ${peso(sh.amount)}  (${pct(sh.kwh, kwh)} of the bill)`)),
+          el('tr', { class: 'sp-due' }, th('Amount to pay the owner'), td(peso(sh.amount))),
+          el('tr', {}, th('Status'), td(x.s.paid ? 'Paid' : 'Not paid yet')))),
+        el('div', { class: 'sp-sign' },
+          el('p', { text: 'Paid by (submeter): ______________________   Date: ____________' }),
+          el('p', { text: 'Received by (owner): ______________________   Date: ____________' })));
+    });
+
+    const sheet = el('div', { class: 'split-print' },
+      el('h1', { text: 'OMECOnnect · Bill split with submeters' }),
+      el('p', { class: 'sp-meta', text: [title, acct, `Printed ${when}`].filter(Boolean).join(' · ') }),
+      el('h2', { text: 'How the bill is divided' }),
+      how,
+      el('h2', { text: 'Each meter' }),
+      people,
+      el('p', { class: 'sp-check', text: `Check: ${parts.join(' + ')} = ${peso(total)} (same as the whole bill)` }),
+      el('p', { class: 'sp-note', text: 'Computed by the OMECOnnect app from the OMECO bill. Every charge on the bill (energy, fixed charges and taxes) is shared by kWh used, so everyone pays the same price per kWh. Any centavo left over from rounding is added to the owner’s share.' }),
+      slips);
+
+    document.querySelectorAll('.split-print').forEach((n) => n.remove());
+    document.body.append(sheet);
+    document.body.classList.add('printing-split');
+    const done = () => {
+      document.body.classList.remove('printing-split');
+      sheet.remove();
+      window.removeEventListener('afterprint', done);
+    };
+    window.addEventListener('afterprint', done);
+    window.print();
+    setTimeout(done, 60000);
+  }
+
   function split(body, { total, kwh, subs, onPaid, mainText = '', title = '' }) {
     const ready = subs.map((s, i) => ({ s, i, k: subKwh(s) })).filter((x) => x.k !== null && !Number.isNaN(x.k));
     const waiting = subs.length - ready.length;
@@ -201,19 +276,31 @@
     const collected = r2(ready.reduce((a, x, n) => a + (x.s.paid ? result.shares[n].amount : 0), 0));
     const paidCount = ready.filter((x) => x.s.paid).length;
 
-    const shareBtn = el('button', { type: 'button', class: 'secondary-btn split-share' }, 'Share the computation');
+    // Share: the phone's share menu (Messenger, SMS, ...); otherwise copy; if
+    // the phone allows neither, show the text so it can be copied by hand.
+    const manual = el('textarea', { class: 'split-share-text hidden', readonly: true, rows: '8', 'aria-label': 'Computation text' });
+    const shareBtn = el('button', { type: 'button', class: 'secondary-btn split-share' }, 'Share');
+    const reset = () => setTimeout(() => { shareBtn.textContent = 'Share'; }, 2500);
     shareBtn.addEventListener('click', async () => {
       const text = shareText({ title, mainText, total, kwh, result, ready });
+      if (navigator.share) {
+        try { await navigator.share({ title: 'OMECOnnect bill split', text }); return; } catch (error) {
+          if (error && error.name === 'AbortError') return; // the share menu was closed
+        }
+      }
       try {
-        if (navigator.share) { await navigator.share({ title: 'OMECOnnect bill split', text }); return; }
         await navigator.clipboard.writeText(text);
         shareBtn.textContent = 'Copied ✓';
-      } catch (error) {
-        if (error && error.name === 'AbortError') return; // closed the share menu
-        try { await navigator.clipboard.writeText(text); shareBtn.textContent = 'Copied ✓'; } catch { shareBtn.textContent = 'Could not share'; }
+        reset();
+      } catch {
+        manual.value = text;
+        manual.classList.remove('hidden');
+        manual.focus();
+        manual.select();
       }
-      setTimeout(() => { shareBtn.textContent = 'Share the computation'; }, 2500);
     });
+    const printBtn = el('button', { type: 'button', class: 'primary-btn split-print-btn' }, 'Print / Save as PDF');
+    printBtn.addEventListener('click', () => printSplit({ title, mainText, total, kwh, result, ready }));
 
     body.replaceChildren(...[
       steps,
@@ -225,7 +312,8 @@
         ...row('Submeters share', peso(fromSubs)),
         ...row(`Paid (${paidCount} of ${ready.length})`, peso(collected)),
         ...row('Still to collect', peso(r2(fromSubs - collected)), true)),
-      shareBtn].filter(Boolean));
+      el('div', { class: 'split-actions' }, printBtn, shareBtn),
+      manual].filter(Boolean));
     return { ready: ready.length, paid: paidCount, count: subs.length, toCollect: r2(fromSubs - collected) };
   }
 
