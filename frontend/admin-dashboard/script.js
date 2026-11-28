@@ -260,10 +260,16 @@ function setBarangay(barangay) {
 // ---------------------------------------------------------------- Barangays inside their municipality
 const barangayView = { search: '', sort: 'order' }; // kept across live refreshes
 
+// "32%" share of a total (one decimal under 10%, so small areas never read 0%).
+function sharePct(part, whole) {
+  if (!whole) return '0%';
+  const p = (part / whole) * 100;
+  return `${p < 10 ? Math.round(p * 10) / 10 : Math.round(p)}%`;
+}
+
 function barangayPanel(municipality, total, perBarangay) {
   const barangays = coverage.get(municipality) || [];
   const withConsumers = barangays.filter((b) => perBarangay.get(b)).length;
-  const max = Math.max(1, ...barangays.map((b) => perBarangay.get(b) || 0));
 
   const tiles = el('div', { class: 'brgy-grid', role: 'list' });
   const empty = el('p', { class: 'brgy-empty hidden' }, 'No barangay matches your search.');
@@ -283,7 +289,7 @@ function barangayPanel(municipality, total, perBarangay) {
       const tile = el('button', { type: 'button', role: 'listitem', class: `brgy-tile${active ? ' active' : ''}${count ? '' : ' empty'}`, 'aria-pressed': String(active), title: `${barangay}: ${count} consumer${count === 1 ? '' : 's'}` },
         el('span', { class: 'brgy-name' }, barangay),
         el('span', { class: 'brgy-count' }, String(count)),
-        el('span', { class: 'brgy-bar' }, el('span', { style: `width:${Math.round((count / max) * 100)}%` })));
+        el('span', { class: 'brgy-share' }, count ? `${sharePct(count, total)} of town` : 'No consumers yet'));
       tile.addEventListener('click', () => setBarangay(active ? '' : barangay));
       return tile;
     }));
@@ -345,9 +351,8 @@ function renderCustomers() {
   const perMunicipality = countBy('municipality');
   const noLocation = base.filter((customer) => !customer.municipality).length;
 
-  // Service-area cards: one per municipality, with a bar relative to the busiest area.
+  // Service-area cards: one per municipality, with its share of all consumers.
   const realMunicipality = filters.municipality && filters.municipality !== NO_LOCATION ? filters.municipality : '';
-  const maxCount = Math.max(1, noLocation, ...perMunicipality.values());
   const areaCard = (label, count, meta, active, onClick, extraClass = '') => {
     const button = el('button', {
       type: 'button',
@@ -356,7 +361,8 @@ function renderCustomers() {
     },
     el('span', { class: 'area-top' }, el('span', { class: 'area-name' }, label), el('span', { class: 'area-count' }, String(count))),
     el('span', { class: 'area-meta' }, meta),
-    el('span', { class: 'area-bar' }, el('span', { style: `width:${Math.round((count / maxCount) * 100)}%` })));
+    extraClass === 'all' ? el('span', { class: 'area-share total' }, 'All consumers')
+      : el('span', { class: 'area-share' }, count ? `${sharePct(count, base.length)} of consumers` : 'No consumers yet'));
     button.addEventListener('click', onClick);
     return button;
   };
