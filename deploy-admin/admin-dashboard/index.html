@@ -306,9 +306,14 @@
             <div class="page-head">
               <div>
                 <h3 class="page-title">Account verification</h3>
-                <p class="page-sub">Customers asking to link their OMECO account number. Check it against OMECO records, then approve or reject.</p>
+                <p class="page-sub">Customers asking to link their OMECO account number. Complete requests are approved automatically; only the ones that need a check stay in Pending, with the reason.</p>
               </div>
               <div class="panel-actions">
+                <label class="auto-switch" title="Supervisors can switch this on or off">
+                  <input type="checkbox" id="autoVerifyToggle" role="switch" />
+                  <span class="auto-switch-track" aria-hidden="true"></span>
+                  <span class="auto-switch-text">Automatic approval <b id="autoVerifyState">…</b></span>
+                </label>
                 <button class="light-btn icon-btn" type="button" data-refresh="verification">Refresh</button>
               </div>
             </div>

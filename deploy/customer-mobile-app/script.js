@@ -1473,7 +1473,13 @@ async function handleAccountVerification(event) {
       accessToken: currentSession.access_token
     });
     verifyAccountForm.reset();
-    setMessage('Verification request submitted. Bills will remain unavailable until OMECO staff approves the account.', 'success');
+    // The database checks the request right away (phase26): complete
+    // requests are approved and linked automatically.
+    await refreshCustomerData();
+    const linked = (currentCustomer.accounts || []).some((a) => String(a.account_number || '').toUpperCase() === accountNumber.toUpperCase());
+    setMessage(linked
+      ? 'Approved automatically. Your OMECO account is now linked and your bills are ready.'
+      : 'Request sent. It needs a quick check by OMECO staff; see Alerts for anything you can add to your Profile.', 'success');
   } catch (error) {
     setMessage(error.message, 'error');
   }

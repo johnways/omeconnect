@@ -698,6 +698,8 @@ body.bell-open { overflow: hidden; }
 [data-theme="dark"] .brgy-head h4 strong { color: #93b4f0; }
 [data-theme="dark"] .brgy-search, [data-theme="dark"] .brgy-sort, [data-theme="dark"] .brgy-close { background: #0d1627; border-color: #31425f; color: var(--text); }
 [data-theme="dark"] .brgy-tile { background: #111b2e; border-color: var(--line); }
+[data-theme="dark"] .auto-switch { background: #111b2e; }
+[data-theme="dark"] .auto-switch-track { background: #2a3a55; }
 [data-theme="dark"] .brgy-tile:hover { border-color: #3b7bf2; }
 [data-theme="dark"] .brgy-count, [data-theme="dark"] .brgy-tile.all:not(.active) .brgy-count { background: rgba(59, 123, 242, 0.2); color: #b9cff7; }
 [data-theme="dark"] .brgy-tile.empty .brgy-count { background: #1a263d; color: #6b7d98; }
@@ -784,3 +786,16 @@ a.btn-sm { display: inline-flex; align-items: center; text-decoration: none; }
 /* Outage window shown under a scheduled announcement */
 .schedule-line { color: #9a6200; font-weight: 600; }
 :root[data-theme="dark"] .schedule-line { color: #fbbf24; }
+
+/* Verification: automatic approval switch + reasons (phase26) */
+.auto-switch { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 0.84rem; font-weight: 600; cursor: pointer; user-select: none; }
+.auto-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.auto-switch-track { position: relative; width: 36px; height: 20px; border-radius: 999px; background: #cbd5e1; transition: background 0.15s ease; flex: none; }
+.auto-switch-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.15s ease; }
+.auto-switch input:checked + .auto-switch-track { background: #16a34a; }
+.auto-switch input:checked + .auto-switch-track::after { transform: translateX(16px); }
+.auto-switch input:focus-visible + .auto-switch-track { outline: 3px solid rgba(245, 163, 0, 0.55); outline-offset: 2px; }
+.auto-switch input:disabled + .auto-switch-track { opacity: 0.5; }
+.auto-switch-text b { margin-left: 2px; }
+.auto-reasons { margin: 6px 0 0; padding-left: 18px; font-size: 0.78rem; color: var(--muted); display: grid; gap: 2px; }
+.auto-reasons li::marker { color: #d97706; }
