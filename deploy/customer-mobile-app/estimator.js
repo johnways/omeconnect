@@ -21,7 +21,6 @@
   let ratesAt = 0;
   let mode = 'meter';
   let subs = []; // { id, name, prev, curr, paid }
-  const MAX_SUBS = 12;
 
   // -------------------------------------------------- saved inputs (this phone only)
   function save() {
@@ -38,13 +37,7 @@
     if (!data) return;
     $('estPrev').value = data.prev || '';
     $('estCurr').value = data.curr || '';
-    subs = (Array.isArray(data.subs) ? data.subs : []).slice(0, MAX_SUBS).map((x, i) => ({
-      id: String(x.id || `s${Date.now()}${i}`),
-      name: String(x.name || '').slice(0, 40),
-      prev: x.prev === undefined || x.prev === null ? '' : String(x.prev),
-      curr: x.curr === undefined || x.curr === null ? '' : String(x.curr),
-      paid: Boolean(x.paid)
-    }));
+    subs = SM.clean(data.subs);
     $('estKwh').value = data.kwh || '';
     // Only Meter reading and kWh remain (any other saved choice opens Meter reading).
     if (data.mode === 'meter' || data.mode === 'kwh') setMode(data.mode, false);
@@ -182,29 +175,8 @@
     renderSplit(total, kwh);
   }
 
-  // -------------------------------------------------- submeters
-  function el(tag, attrs = {}, ...children) {
-    const node = document.createElement(tag);
-    Object.entries(attrs).forEach(([k, v]) => {
-      if (v === null || v === undefined || v === false) return;
-      if (k === 'class') node.className = v;
-      else if (k === 'text') node.textContent = v;
-      else if (k === 'value') node.value = v;
-      else if (k === 'checked') node.checked = Boolean(v);
-      else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
-      else node.setAttribute(k, v === true ? '' : v);
-    });
-    children.flat().forEach((c) => { if (c !== null && c !== undefined && c !== false) node.append(c); });
-    return node;
-  }
-
-  const subName = (s, i) => (s.name || '').trim() || `Submeter ${i + 1}`;
-  // kWh of one submeter: null = readings missing, NaN = current lower than previous.
-  function subKwh(s) {
-    if (s.prev === '' || s.curr === '') return null;
-    const diff = Number(s.curr) - Number(s.prev);
-    return diff < 0 ? NaN : diff;
-  }
+  // -------------------------------------------------- submeters (submeters.js)
+  const SM = window.OMECO_SUBMETERS;
 
   // The big "30 kWh" figure under the main meter readings.
   function renderMainUsed() {
@@ -218,102 +190,11 @@
     box.classList.remove('hidden');
   }
 
-  function subUsedText(s) {
-    const k = subKwh(s);
-    if (k === null) return 'Enter both readings';
-    if (Number.isNaN(k)) return 'Current is lower than previous';
-    return `${num(s.curr)} − ${num(s.prev)} = ${kwhText(k)}`;
-  }
-
-  // Inputs are built once (on add / remove / restore) so typing keeps focus.
-  function renderSubs() {
-    const list = $('estSubList');
-    list.replaceChildren(...subs.map((s, i) => {
-      const used = el('p', { class: 'est-sub-used', text: subUsedText(s) });
-      const mark = () => used.classList.toggle('bad', Number.isNaN(subKwh(s)));
-      const update = (key) => (event) => {
-        s[key] = event.target.value;
-        used.textContent = subUsedText(s);
-        mark();
-        calculate();
-        save();
-      };
-      mark();
-      return el('div', { class: 'est-sub', 'data-sub': s.id },
-        el('div', { class: 'est-sub-top' },
-          el('label', { class: 'est-sub-name' },
-            el('span', { text: 'Submeter name' }),
-            el('input', { type: 'text', maxlength: '40', value: s.name, placeholder: `e.g. Tenant ${i + 1}`, oninput: update('name') })),
-          el('button', {
-            type: 'button', class: 'est-sub-remove', 'aria-label': 'Remove submeter', title: 'Remove submeter',
-            onclick: () => { subs = subs.filter((x) => x.id !== s.id); renderSubs(); calculate(); save(); }
-          }, '×')),
-        el('div', { class: 'est-grid' },
-          el('label', {}, 'Previous reading',
-            el('input', { type: 'number', inputmode: 'decimal', min: '0', step: '0.1', value: s.prev, placeholder: 'e.g. 500', oninput: update('prev') })),
-          el('label', {}, 'Current reading',
-            el('input', { type: 'number', inputmode: 'decimal', min: '0', step: '0.1', value: s.curr, placeholder: 'e.g. 512', oninput: update('curr') }))),
-        used);
-    }));
-    $('estAddSub').disabled = subs.length >= MAX_SUBS;
-  }
-
-  // "Bill per meter": each person's share, the computation, and paid status.
   function renderSplit(total, kwh) {
     const card = $('estSplit');
-    const body = $('estSplitBody');
     if (mode !== 'meter' || !subs.length || total === null || kwh === null) { card.classList.add('hidden'); return; }
     card.classList.remove('hidden');
-
-    const ready = subs.map((s, i) => ({ s, i, k: subKwh(s) })).filter((x) => x.k !== null && !Number.isNaN(x.k));
-    const waiting = subs.length - ready.length;
-    const result = window.OMECO_BILLING.splitBill(total, kwh, ready.map((x) => x.k));
-    const r2 = window.OMECO_BILLING.round2;
-
-    if (result.error === 'no-usage') {
-      body.replaceChildren(el('p', { class: 'est-split-note', text: 'The main meter shows 0 kWh, so there is nothing to divide yet.' }));
-      return;
-    }
-    if (result.error === 'subs-exceed') {
-      body.replaceChildren(el('p', { class: 'est-split-note bad', text: 'The submeters add up to more kWh than the main meter. Please check the readings.' }));
-      return;
-    }
-
-    const formula = (k, amount) => `${kwhText(k)} ÷ ${kwhText(kwh)} × ${peso(total)} = ${peso(amount)}`;
-    const rows = ready.map((x, n) => {
-      const share = result.shares[n];
-      const box = el('input', {
-        type: 'checkbox', checked: x.s.paid,
-        onchange: (event) => { x.s.paid = event.target.checked; save(); calculate(); }
-      });
-      return el('li', { class: `est-split-row${x.s.paid ? ' paid' : ''}` },
-        el('div', { class: 'est-split-main' },
-          el('strong', { 'data-no-translate': true, text: subName(x.s, x.i) }),
-          el('span', { class: 'est-split-amount', text: peso(share.amount) })),
-        el('small', { class: 'est-split-formula', text: formula(share.kwh, share.amount) }),
-        el('label', { class: 'est-paid' }, box, el('span', { text: x.s.paid ? 'Paid to the owner' : 'Not paid yet' })));
-    });
-    const subKwhSum = kwh - result.owner.kwh;
-    const owner = el('li', { class: 'est-split-row owner' },
-      el('div', { class: 'est-split-main' },
-        el('strong', { text: 'Main meter owner (you)' }),
-        el('span', { class: 'est-split-amount', text: peso(result.owner.amount) })),
-      el('small', { class: 'est-split-formula', text: `${kwhText(kwh)} − ${kwhText(subKwhSum)} = ${kwhText(result.owner.kwh)}` }),
-      el('small', { class: 'est-split-formula', text: `${peso(total)} − ${peso(r2(total - result.owner.amount))} = ${peso(result.owner.amount)}` }));
-
-    const fromSubs = r2(result.shares.reduce((a, sh) => a + sh.amount, 0));
-    const collected = r2(ready.reduce((a, x, n) => a + (x.s.paid ? result.shares[n].amount : 0), 0));
-    const paidCount = ready.filter((x) => x.s.paid).length;
-    const summary = el('dl', { class: 'est-breakdown est-split-sum' },
-      ...row('Whole bill', peso(total)),
-      ...row('Submeters share', peso(fromSubs)),
-      ...row(`Paid (${paidCount} of ${ready.length})`, peso(collected)),
-      ...row('Still to collect', peso(r2(fromSubs - collected)), true));
-
-    body.replaceChildren(...[
-      el('ul', { class: 'est-split-list' }, owner, rows),
-      waiting ? el('p', { class: 'est-split-note', text: `Submeters waiting for readings: ${waiting}` }) : null,
-      summary].filter(Boolean));
+    SM.split($('estSplitBody'), { total, kwh, subs, onPaid: () => { save(); calculate(); } });
   }
 
   // Compare with the customer's latest real bill.
@@ -336,15 +217,6 @@
   document.querySelectorAll('.est-tab').forEach((tab) => tab.addEventListener('click', () => setMode(tab.dataset.mode)));
   ['estPrev', 'estCurr', 'estKwh'].forEach((id) => $(id).addEventListener('input', () => { calculate(); save(); }));
   $('estClass').addEventListener('change', () => { calculate(); save(); });
-  $('estAddSub').addEventListener('click', () => {
-    if (subs.length >= MAX_SUBS) return;
-    subs.push({ id: `s${Date.now()}`, name: '', prev: '', curr: '', paid: false });
-    renderSubs();
-    calculate();
-    save();
-    const first = $('estSubList').querySelector('.est-sub:last-child input');
-    if (first) first.focus();
-  });
   document.querySelectorAll('[data-screen="estimatorScreen"]').forEach((button) => button.addEventListener('click', () => {
     const bills = (typeof currentCustomer !== 'undefined' && currentCustomer && currentCustomer.bills) || [];
     const last = bills.find((b) => b.consumption_kwh != null);
@@ -355,7 +227,10 @@
   }));
 
   restore();
-  renderSubs();
+  SM.editor({
+    list: $('estSubList'), addButton: $('estAddSub'),
+    get: () => subs, set: (next) => { subs = next; }, changed: () => { calculate(); save(); }
+  });
   calculate();
   void loadRates(true);
 

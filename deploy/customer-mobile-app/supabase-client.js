@@ -363,7 +363,7 @@
       const billsPromise = account
         ? restRequest('electricity_bills', {
             customer_account_id: `eq.${account.id}`,
-            select: 'id,billing_month,due_date,total_amount,outstanding_balance,consumption_kwh,status,created_at,charges,payment_reference,period_from,period_to',
+            select: 'id,billing_month,due_date,total_amount,outstanding_balance,consumption_kwh,status,created_at,charges,payment_reference,period_from,period_to,previous_reading,present_reading,multiplier',
             order: 'created_at.desc'
           }, accessToken)
         : Promise.resolve([]);
