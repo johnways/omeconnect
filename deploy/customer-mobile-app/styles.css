@@ -1407,6 +1407,23 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
 .est-split-row.paid .est-paid { color: var(--green-600); }
 .est-split-note { margin: 10px 0 0; font-size: 0.82rem; color: var(--muted); }
 .est-split-sum { margin-top: 12px; }
+/* Step-by-step computation */
+.split-steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.split-step { display: flex; gap: 10px; align-items: flex-start; }
+.split-step-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 0.78rem; font-weight: 900; color: #fff; background: var(--primary); }
+.split-step-n.ok { background: var(--green-600); }
+.split-step-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.split-step-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 0.88rem; font-weight: 700; }
+.split-step-top strong { font-size: 1rem; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.split-step-body small { font-size: 0.78rem; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.est-split-formula.strong { color: var(--text); font-weight: 700; }
+.est-split-pct { font-size: 0.74rem; color: var(--muted); }
+.split-check { display: flex; gap: 10px; align-items: flex-start; margin-top: 12px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--green-600); background: var(--green-50); }
+.split-check > div { display: grid; gap: 2px; min-width: 0; }
+.split-check strong { font-size: 0.86rem; }
+.split-check .est-split-formula { overflow-wrap: anywhere; }
+.split-check-ok { font-size: 0.78rem; font-weight: 800; color: var(--green-600); }
+.split-share { width: 100%; margin-top: 12px !important; }
 
 /* My Bills: split a bill with submeters (bill-split.js) */
 .bill-split { margin-top: 14px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); display: grid; gap: 10px; }

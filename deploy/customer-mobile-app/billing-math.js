@@ -45,10 +45,15 @@
     const subTotal = subs.reduce((a, b) => a + b, 0);
     if (main <= 0) return { error: 'no-usage' };
     if (subTotal > main + 1e-9) return { error: 'subs-exceed', subTotal };
-    const shares = subs.map((kwh) => ({ kwh, amount: round2((bill * kwh) / main) }));
+    // Price per kWh = whole bill ÷ main meter kWh (every charge on the bill,
+    // fixed charges and taxes included, is shared by kWh used).
+    const rate = bill / main;
+    const shares = subs.map((kwh) => ({ kwh, amount: round2(kwh * rate) }));
     const ownerKwh = Math.round((main - subTotal) * 1000) / 1000;
     const owner = { kwh: ownerKwh, amount: round2(bill - shares.reduce((a, s) => a + s.amount, 0)) };
-    return { shares, owner };
+    // Centavo left over from rounding (always given to the owner, shown on screen).
+    const rounding = round2(owner.amount - round2(ownerKwh * rate));
+    return { rate, shares, owner, rounding };
   }
 
   root.OMECO_BILLING = { scheduleBreakdown, splitBill, round2 };

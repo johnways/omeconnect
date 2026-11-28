@@ -194,7 +194,10 @@
     const card = $('estSplit');
     if (mode !== 'meter' || !subs.length || total === null || kwh === null) { card.classList.add('hidden'); return; }
     card.classList.remove('hidden');
-    SM.split($('estSplitBody'), { total, kwh, subs, onPaid: () => { save(); calculate(); } });
+    SM.split($('estSplitBody'), {
+      total, kwh, subs, title: 'estimate', mainText: `${num($('estCurr').value)} − ${num($('estPrev').value)} = ${kwhText(kwh)}`,
+      onPaid: () => { save(); calculate(); }
+    });
   }
 
   // Compare with the customer's latest real bill.

@@ -111,9 +111,39 @@
     return [dt, dd];
   }
 
-  // Fills `body` with each person's share. Returns a short status for badges:
-  // { ready, paid, count, toCollect } or null when nothing can be divided.
-  function split(body, { total, kwh, subs, onPaid }) {
+  // Fills `body` with the step-by-step computation:
+  //   1. kWh on the main meter   2. price per kWh = whole bill ÷ main kWh
+  //   3. each meter pays its kWh × price per kWh (owner = main − submeters)
+  //   4. check: all shares added together = the whole bill
+  // plus paid ticks and a "Share the computation" button.
+  // Returns { ready, paid, count, toCollect } or null when nothing can be divided.
+  const rateText = (v) => `₱${Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
+  const pct = (part, whole) => `${(Math.round((part / whole) * 1000) / 10).toLocaleString('en-PH')}%`;
+
+  function step(n, label, value, detail) {
+    return el('li', { class: 'split-step' },
+      el('span', { class: 'split-step-n', 'aria-hidden': 'true', text: String(n) }),
+      el('div', { class: 'split-step-body' },
+        el('div', { class: 'split-step-top' }, el('span', { text: label }), value ? el('strong', { text: value }) : null),
+        detail ? el('small', { text: detail }) : null));
+  }
+
+  function shareText({ title, mainText, total, kwh, result, ready }) {
+    const lines = [`OMECOnnect bill split${title ? ` – ${title}` : ''}`, ''];
+    lines.push(`Main meter: ${mainText || kwhText(kwh)}`);
+    lines.push(`Whole bill: ${peso(total)}`);
+    lines.push(`Price per kWh: ${peso(total)} ÷ ${kwhText(kwh)} = ${rateText(result.rate)}`, '');
+    ready.forEach((x, n) => {
+      const sh = result.shares[n];
+      lines.push(`${subName(x.s, x.i)}: ${num(x.s.curr)} − ${num(x.s.prev)} = ${kwhText(sh.kwh)} × ${rateText(result.rate)} = ${peso(sh.amount)} (${x.s.paid ? 'Paid' : 'Not paid yet'})`);
+    });
+    const sub = r2(kwh - result.owner.kwh);
+    lines.push(`Main meter owner: ${kwhText(kwh)} − ${kwhText(sub)} = ${kwhText(result.owner.kwh)} × ${rateText(result.rate)} = ${peso(result.owner.amount)}${result.rounding ? ` (includes ${peso(result.rounding)} rounding)` : ''}`, '');
+    lines.push(`Check: ${[...result.shares.map((sh) => peso(sh.amount)), peso(result.owner.amount)].join(' + ')} = ${peso(total)}`);
+    return lines.join('\n');
+  }
+
+  function split(body, { total, kwh, subs, onPaid, mainText = '', title = '' }) {
     const ready = subs.map((s, i) => ({ s, i, k: subKwh(s) })).filter((x) => x.k !== null && !Number.isNaN(x.k));
     const waiting = subs.length - ready.length;
     const result = window.OMECO_BILLING.splitBill(total, kwh, ready.map((x) => x.k));
@@ -127,7 +157,16 @@
       return null;
     }
 
-    const formula = (k, amount) => `${kwhText(k)} ÷ ${kwhText(kwh)} × ${peso(total)} = ${peso(amount)}`;
+    const rate = rateText(result.rate);
+    const subKwhTotal = r2(kwh - result.owner.kwh);
+
+    // Steps 1 and 2
+    const steps = el('ol', { class: 'split-steps' },
+      step(1, 'Main meter used', kwhText(kwh), mainText || null),
+      step(2, 'Price per kWh', rate, `${peso(total)} (whole bill) ÷ ${kwhText(kwh)}`),
+      step(3, 'Each meter pays its kWh × price per kWh', null, null));
+
+    // Step 3: one row per person
     const rows = ready.map((x, n) => {
       const share = result.shares[n];
       const box = el('input', { type: 'checkbox', checked: x.s.paid, onchange: (event) => { x.s.paid = event.target.checked; onPaid(); } });
@@ -135,27 +174,58 @@
         el('div', { class: 'est-split-main' },
           el('strong', { 'data-no-translate': true, text: subName(x.s, x.i) }),
           el('span', { class: 'est-split-amount', text: peso(share.amount) })),
-        el('small', { class: 'est-split-formula', text: formula(share.kwh, share.amount) }),
+        el('small', { class: 'est-split-formula', text: `${num(x.s.curr)} − ${num(x.s.prev)} = ${kwhText(share.kwh)}` }),
+        el('small', { class: 'est-split-formula strong', text: `${kwhText(share.kwh)} × ${rate} = ${peso(share.amount)}` }),
+        el('small', { class: 'est-split-pct', text: `${pct(share.kwh, kwh)} of the bill` }),
         el('label', { class: 'est-paid' }, box, el('span', { text: x.s.paid ? 'Paid to the owner' : 'Not paid yet' })));
     });
     const owner = el('li', { class: 'est-split-row owner' },
       el('div', { class: 'est-split-main' },
         el('strong', { text: 'Main meter owner (you)' }),
         el('span', { class: 'est-split-amount', text: peso(result.owner.amount) })),
-      el('small', { class: 'est-split-formula', text: `${kwhText(kwh)} − ${kwhText(r2(kwh - result.owner.kwh))} = ${kwhText(result.owner.kwh)}` }),
-      el('small', { class: 'est-split-formula', text: `${peso(total)} − ${peso(r2(total - result.owner.amount))} = ${peso(result.owner.amount)}` }));
+      el('small', { class: 'est-split-formula', text: `${kwhText(kwh)} − ${kwhText(subKwhTotal)} = ${kwhText(result.owner.kwh)}` }),
+      el('small', { class: 'est-split-formula strong', text: `${kwhText(result.owner.kwh)} × ${rate} = ${peso(r2(result.owner.kwh * result.rate))}` }),
+      result.rounding ? el('small', { class: 'est-split-pct', text: `Plus ${peso(result.rounding)} rounding, so the shares add up to the bill exactly` }) : null,
+      el('small', { class: 'est-split-pct', text: `${pct(result.owner.kwh, kwh)} of the bill` }));
+
+    // Step 4: the check
+    const parts = [...result.shares.map((sh) => peso(sh.amount)), peso(result.owner.amount)];
+    const check = el('div', { class: 'split-check' },
+      el('span', { class: 'split-step-n ok', 'aria-hidden': 'true', text: '✓' }),
+      el('div', {},
+        el('strong', { text: 'Check: all shares added together' }),
+        el('small', { class: 'est-split-formula', text: `${parts.join(' + ')} = ${peso(total)}` }),
+        el('small', { class: 'split-check-ok', text: 'Same as the whole bill' })));
 
     const fromSubs = r2(result.shares.reduce((a, sh) => a + sh.amount, 0));
     const collected = r2(ready.reduce((a, x, n) => a + (x.s.paid ? result.shares[n].amount : 0), 0));
     const paidCount = ready.filter((x) => x.s.paid).length;
+
+    const shareBtn = el('button', { type: 'button', class: 'secondary-btn split-share' }, 'Share the computation');
+    shareBtn.addEventListener('click', async () => {
+      const text = shareText({ title, mainText, total, kwh, result, ready });
+      try {
+        if (navigator.share) { await navigator.share({ title: 'OMECOnnect bill split', text }); return; }
+        await navigator.clipboard.writeText(text);
+        shareBtn.textContent = 'Copied ✓';
+      } catch (error) {
+        if (error && error.name === 'AbortError') return; // closed the share menu
+        try { await navigator.clipboard.writeText(text); shareBtn.textContent = 'Copied ✓'; } catch { shareBtn.textContent = 'Could not share'; }
+      }
+      setTimeout(() => { shareBtn.textContent = 'Share the computation'; }, 2500);
+    });
+
     body.replaceChildren(...[
-      el('ul', { class: 'est-split-list' }, owner, rows),
+      steps,
+      el('ul', { class: 'est-split-list' }, rows, owner),
       waiting ? el('p', { class: 'est-split-note', text: `Submeters waiting for readings: ${waiting}` }) : null,
+      check,
       el('dl', { class: 'est-breakdown est-split-sum' },
         ...row('Whole bill', peso(total)),
         ...row('Submeters share', peso(fromSubs)),
         ...row(`Paid (${paidCount} of ${ready.length})`, peso(collected)),
-        ...row('Still to collect', peso(r2(fromSubs - collected)), true))].filter(Boolean));
+        ...row('Still to collect', peso(r2(fromSubs - collected)), true)),
+      shareBtn].filter(Boolean));
     return { ready: ready.length, paid: paidCount, count: subs.length, toCollect: r2(fromSubs - collected) };
   }
 
