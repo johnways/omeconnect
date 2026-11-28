@@ -48,6 +48,23 @@ begin
   reset role;
   if seen <> 0 then raise exception 'Customers can see unpublished announcements.'; end if;
 
+  -- 5) Automatic verification (phase26): complete -> approved, incomplete -> stays pending.
+  declare
+    cust uuid; req uuid; st text; m text; b text;
+  begin
+    update public.app_settings set value = 'true'::jsonb where key = 'auto_verify_enabled';
+    select id into cust from public.users where role = 'customer' order by created_at limit 1;
+    select municipality, barangay into m, b from public.service_areas limit 1;
+    update public.users set full_name = 'Check Customer', email = 'check@example.invalid', municipality = m, barangay = b where id = cust;
+    insert into public.account_verification_requests (user_id, account_number, status) values (cust, 'CHECK-990001', 'pending') returning id into req;
+    select status into st from public.account_verification_requests where id = req;
+    if st <> 'approved' then raise exception 'A complete verification request was not approved automatically (%).', st; end if;
+    update public.users set municipality = null, barangay = null where id = cust;
+    insert into public.account_verification_requests (user_id, account_number, status) values (cust, 'CHECK-990002', 'pending') returning id into req;
+    select status into st from public.account_verification_requests where id = req;
+    if st <> 'pending' then raise exception 'An incomplete verification request was approved (%).', st; end if;
+  end;
+
   raise notice 'All database checks passed.';
 end $$;
 

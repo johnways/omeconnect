@@ -14,6 +14,8 @@
     rejected: ['Not accepted', 'danger']
   };
   const REQUEST_STATUS = { pending: ['Pending', 'pending'], approved: ['Approved', 'approved'], rejected: ['Rejected', 'danger'] };
+  // Automatic approval (phase26): app_settings.auto_verify_enabled, changed by supervisors.
+  let autoVerifyOn = null;
 
   const state = {
     requests: [],
@@ -137,8 +139,12 @@
   // ---------------------------------------------------------------- loaders
   async function loadRequests() {
     state.requests = await supabaseClient.select(
-      'account_verification_requests?select=id,user_id,account_number,status,created_at,reviewed_at,review_note&order=created_at.desc&limit=300',
+      'account_verification_requests?select=id,user_id,account_number,status,created_at,reviewed_at,review_note,auto_decision,auto_reasons&order=created_at.desc&limit=300',
       token());
+    try {
+      const setting = await supabaseClient.select('app_settings?key=eq.auto_verify_enabled&select=value', token());
+      autoVerifyOn = Boolean(setting && setting[0] && setting[0].value === true);
+    } catch { autoVerifyOn = null; }
     const ids = [...new Set(state.requests.map((r) => r.user_id))];
     state.usersById = new Map();
     if (ids.length) {
@@ -407,27 +413,77 @@
     const rows = state.requests.filter((r) => !state.verificationTab || r.status === state.verificationTab);
     setRows('verificationRows', 'verificationEmpty', rows.map((r) => {
       const user = state.usersById.get(r.user_id) || {};
-      const [label, kind] = REQUEST_STATUS[r.status] || [r.status, 'neutral'];
+      const auto = r.status === 'approved' && r.auto_decision === 'approved';
+      const [label, kind] = auto ? ['Approved automatically', 'approved'] : (REQUEST_STATUS[r.status] || [r.status, 'neutral']);
+      const reasons = r.status === 'pending' && Array.isArray(r.auto_reasons) ? r.auto_reasons : [];
       const actions = el('div', { class: 'row-actions' });
       if (r.status === 'pending') {
         const approve = el('button', { type: 'button', class: 'btn-sm approve' }, 'Approve');
         const reject = el('button', { type: 'button', class: 'btn-sm reject' }, 'Reject');
+        const recheck = el('button', { type: 'button', class: 'btn-sm', title: 'Run the automatic check again' }, 'Check again');
         approve.addEventListener('click', () => void approveRequest(r));
         reject.addEventListener('click', () => void rejectRequest(r));
-        actions.append(approve, reject);
+        recheck.addEventListener('click', () => void recheckRequest(r, recheck));
+        actions.append(approve, reject, recheck);
       } else {
-        actions.append(el('span', { class: 'cell-sub' }, `Reviewed ${fmtDate(r.reviewed_at, false)}`));
+        actions.append(el('span', { class: 'cell-sub' }, `${auto ? 'By the system' : 'Reviewed'} ${fmtDate(r.reviewed_at, false)}`));
       }
+      const statusCell = reasons.length
+        ? [badge('Needs a check', 'pending'), el('ul', { class: 'auto-reasons' }, reasons.map((text) => el('li', {}, text)))]
+        : [badge(label, kind), r.review_note && !auto ? el('span', { class: 'note-line' }, r.review_note) : null];
       return el('tr', {},
         el('td', {}, el('strong', {}, user.full_name || '—'),
           el('span', { class: 'cell-sub' }, [user.email, user.mobile_number].filter(Boolean).join(' · '))),
         el('td', {}, user.municipality ? `${user.barangay}, ${user.municipality}` : el('span', { class: 'not-set' }, 'Not set')),
         el('td', { class: 'mono' }, r.account_number),
         el('td', {}, fmtDate(r.created_at)),
-        el('td', {}, badge(label, kind), r.review_note ? el('span', { class: 'note-line' }, r.review_note) : null),
+        el('td', {}, ...statusCell),
         el('td', {}, actions));
-    }), state.verificationTab === 'pending' ? 'No pending requests. You are all caught up.' : 'Nothing here.');
+    }), state.verificationTab === 'pending' ? 'No pending requests. Complete requests are approved automatically.' : 'Nothing here.');
+    renderAutoSwitch();
   }
+
+  // ---------------------------------------------------------------- automatic approval
+  function renderAutoSwitch() {
+    const box = $('autoVerifyToggle');
+    if (!box) return;
+    box.checked = autoVerifyOn === true;
+    box.disabled = autoVerifyOn === null;
+    $('autoVerifyState').textContent = autoVerifyOn === null ? '…' : autoVerifyOn ? 'On' : 'Off';
+  }
+
+  async function setAutoVerify(on) {
+    if (!needLive()) { renderAutoSwitch(); return; }
+    try {
+      const result = await supabaseClient.rpc('set_auto_verification', { p_enabled: on }, token());
+      autoVerifyOn = on;
+      const now = (result && result.approved_now) || 0;
+      toast(on ? `Automatic approval is on.${now ? ` ${now} pending request${now === 1 ? ' was' : 's were'} approved now.` : ''}`
+        : 'Automatic approval is off. New requests wait for staff.', 'success');
+      await showVerification();
+    } catch (error) {
+      toast(error.message || 'Could not change automatic approval.', 'error');
+      renderAutoSwitch();
+    }
+  }
+
+  async function recheckRequest(request, button) {
+    if (!needLive()) return;
+    button.disabled = true;
+    try {
+      const result = await supabaseClient.rpc('recheck_verification_request', { p_request_id: request.id }, token());
+      const outcome = result && result.result;
+      toast(outcome === 'approved' ? 'Everything is complete now. The request was approved automatically.'
+        : outcome === 'off' ? 'Automatic approval is off. Approve or reject it yourself.'
+          : `Still needs a check: ${((result && result.reasons) || []).join('; ')}`, outcome === 'approved' ? 'success' : '');
+      if (outcome === 'approved') customers = [];
+      await showVerification();
+    } catch (error) {
+      toast(error.message || 'Could not check the request.', 'error');
+      button.disabled = false;
+    }
+  }
+  if ($('autoVerifyToggle')) $('autoVerifyToggle').addEventListener('change', (event) => void setAutoVerify(event.target.checked));
 
   async function approveRequest(request) {
     if (!needLive()) return;
