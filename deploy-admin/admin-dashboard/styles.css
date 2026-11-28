@@ -634,19 +634,20 @@ th {
   font-size: 0.74rem;
 }
 
-.area-bar {
-  height: 5px;
+/* Share of all consumers (replaces the old progress bar) */
+.area-share {
+  justify-self: start;
+  width: fit-content;
+  padding: 2px 9px;
   border-radius: 999px;
-  background: #edf2f9;
-  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: rgba(22, 82, 197, 0.1);
+  font-variant-numeric: tabular-nums;
 }
-
-.area-bar span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #4da3ff, var(--primary));
-}
+.area-share.total { color: #0f7a3d; background: rgba(22, 163, 74, 0.12); }
+.area-card.empty .area-share { color: #8a95a8; background: #eef1f5; }
 
 .area-card.empty .area-count {
   color: #aab3c2;
@@ -666,9 +667,7 @@ th {
   border-style: dashed;
 }
 
-.area-card.unset .area-bar span {
-  background: #a7b0be;
-}
+.area-card.unset .area-share { color: #6b7686; background: #eef1f5; }
 
 /* Barangay chips */
 .barangay-section {
