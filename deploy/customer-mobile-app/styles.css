@@ -345,7 +345,13 @@ button, input, textarea, select { font: inherit; color: inherit; }
   background: var(--green-50);
   font-weight: 700;
 }
-.hero-amount { display: grid; gap: 2px; }
+.hero-amount { display: grid; gap: 2px; min-width: 0; }
+.hero-amount-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.hero-bills-btn { flex: none; display: grid; justify-items: center; gap: 4px; min-width: 76px; padding: 10px 8px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-1); color: var(--text); font: inherit; cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease; }
+.hero-bills-btn:hover { transform: translateY(-1px); border-color: #c9dafc; box-shadow: var(--shadow-2); }
+.hero-bills-btn:active { transform: scale(0.97); }
+.hero-bills-btn .action-icon { margin-bottom: 0; width: 48px; height: 48px; }
+.hero-bills-label { font-size: 0.74rem; font-weight: 800; color: var(--text); }
 .hero-amount span { font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .hero-amount strong {
   font-size: 2.1rem;
@@ -390,7 +396,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 .action-card {
@@ -829,7 +835,7 @@ select:disabled { background: #f1f5f9; color: var(--muted); }
 
 /* ---------------------------------------------------------------- Small phones */
 @media (max-width: 360px) {
-  .quick-actions { grid-template-columns: repeat(2, 1fr); }
+  .quick-actions { grid-template-columns: repeat(3, 1fr); }
   .metrics-grid { grid-template-columns: 1fr 1fr; }
   .hero-amount strong { font-size: 1.8rem; }
   .profile-meta { grid-template-columns: 1fr; }
